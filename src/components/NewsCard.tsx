@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { memo, useRef, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { enUS, fr } from "date-fns/locale";
 import type { Article, Language } from "@/types";
@@ -32,7 +32,7 @@ function formatPublished(publishedAt: string, language: Language): string {
   });
 }
 
-export default function NewsCard({ article, language, featured = false }: NewsCardProps) {
+function NewsCard({ article, language, featured = false }: NewsCardProps) {
   const cardRef = useRef<HTMLAnchorElement>(null);
   const [tilt, setTilt] = useState({ rotateX: 0, rotateY: 0 });
   const [hovering, setHovering] = useState(false);
@@ -72,10 +72,11 @@ export default function NewsCard({ article, language, featured = false }: NewsCa
       style={{
         transform: `perspective(1000px) rotateX(${tilt.rotateX}deg) rotateY(${tilt.rotateY}deg) scale(${scale})`,
         // Fast follow while tracking the cursor, slower easing back to rest.
+        // Transform-only (no box-shadow) keeps the hover compositor-cheap.
         transition: hovering
-          ? "transform 0.1s ease, box-shadow 0.3s ease, border-color 0.3s ease"
-          : "transform 0.4s ease, box-shadow 0.3s ease, border-color 0.3s ease",
-        boxShadow: hovering ? "0 0 30px rgba(201, 168, 76, 0.15)" : "none",
+          ? "transform 0.1s ease, border-color 0.3s ease"
+          : "transform 0.4s ease, border-color 0.3s ease",
+        willChange: "transform",
       }}
       className="group flex h-full flex-col gap-3 rounded-xl border border-gv-border bg-gv-card p-5 [transform-style:preserve-3d] hover:border-gv-gold"
     >
@@ -105,3 +106,7 @@ export default function NewsCard({ article, language, featured = false }: NewsCa
     </a>
   );
 }
+
+// Memoized: when the grid grows, already-rendered cards keep the same
+// article/language props and skip re-rendering.
+export default memo(NewsCard);

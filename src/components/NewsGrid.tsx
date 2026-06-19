@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Article, Language } from "@/types";
 import NewsCard from "./NewsCard";
 
@@ -14,15 +14,46 @@ interface NewsGridProps {
 const STAGGER_MS = 80;
 const STAGGER_WINDOW = 9;
 
+// Render only the first PAGE_SIZE cards, then grow by PAGE_SIZE as the user
+// scrolls — keeps the DOM small for 400+ article feeds.
+const PAGE_SIZE = 30;
+
 export default function NewsGrid({ articles, language }: NewsGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
+  // Reset the window when the article set changes (e.g. language switch).
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [articles]);
+
+  // Grow the window as the bottom sentinel approaches the viewport.
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || typeof IntersectionObserver === "undefined") return;
+    if (visibleCount >= articles.length) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleCount((count) => Math.min(count + PAGE_SIZE, articles.length));
+        }
+      },
+      { rootMargin: "400px 0px" }, // load ahead of the fold for a seamless scroll
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [visibleCount, articles.length]);
+
+  // Reveal-on-scroll animation for whatever cards are currently rendered.
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     const items = Array.from(
-      container.querySelectorAll<HTMLElement>("[data-reveal]"),
+      container.querySelectorAll<HTMLElement>("[data-reveal]:not(.gv-revealed)"),
     );
 
     if (typeof IntersectionObserver === "undefined") {
@@ -44,7 +75,9 @@ export default function NewsGrid({ articles, language }: NewsGridProps) {
 
     items.forEach((item) => observer.observe(item));
     return () => observer.disconnect();
-  }, [articles]);
+  }, [visibleCount, articles]);
+
+  const shown = articles.slice(0, visibleCount);
 
   return (
     <div
@@ -58,7 +91,7 @@ export default function NewsGrid({ articles, language }: NewsGridProps) {
         ref={containerRef}
         className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
       >
-        {articles.map((article, index) => (
+        {shown.map((article, index) => (
           <div
             key={article.id}
             data-reveal
@@ -74,6 +107,10 @@ export default function NewsGrid({ articles, language }: NewsGridProps) {
           </div>
         ))}
       </div>
+
+      {visibleCount < articles.length && (
+        <div ref={sentinelRef} aria-hidden className="h-px w-full" />
+      )}
     </div>
   );
 }
