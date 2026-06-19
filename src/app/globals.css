@@ -1,26 +1,71 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * GlobeVortex design tokens.
+ * Tailwind v4 reads theme tokens from CSS (@theme), not tailwind.config.ts —
+ * defining --color-* here generates the bg-/text-/border-gv-* utilities.
+ */
+@theme {
+  --color-gv-bg: #0a0a0f;
+  --color-gv-card: #1a1a24;
+  --color-gv-border: #2a2a38;
+  --color-gv-gold: #c9a84c;
+  --color-gv-gold-light: #e8c96d;
+  --color-gv-muted: #8b8ba0;
 }
 
+/* next/font exposes these CSS variables on <html>; map them to font utilities. */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-display: var(--font-playfair);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-gv-bg);
+  color: #ededed;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* ── News ticker: seamless infinite left-scroll ──────────────────────────── */
+@keyframes ticker-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    /* The track holds two identical copies; -50% lands exactly on the seam. */
+    transform: translateX(-50%);
+  }
+}
+
+.animate-ticker {
+  animation: ticker-scroll 40s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-ticker {
+    animation: none;
+  }
+}
+
+/* ── NewsGrid scroll-in reveal ───────────────────────────────────────────── */
+.gv-reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition:
+    opacity 0.6s ease-out,
+    transform 0.6s ease-out;
+}
+
+.gv-reveal.gv-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gv-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }
