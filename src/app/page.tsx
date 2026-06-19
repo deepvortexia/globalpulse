@@ -47,7 +47,7 @@ export default function Home() {
   const text = UI_TEXT[language];
 
   return (
-    <div className="flex min-h-screen flex-col bg-gv-bg text-white">
+    <div className="flex min-h-screen flex-col text-white">
       <Header language={language} onLanguageChange={setLanguage} />
       <NewsTicker headlines={headlines} />
 

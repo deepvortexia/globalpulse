@@ -22,9 +22,21 @@
 }
 
 body {
-  background: var(--color-gv-bg);
+  background: radial-gradient(ellipse at 50% 0%, #16141f 0%, #0d0b14 40%, #0a0a0f 100%);
+  background-attachment: fixed;
   color: #ededed;
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Very subtle CSS-only grain for depth. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  opacity: 0.025;
+  pointer-events: none;
+  z-index: 0;
 }
 
 ::selection {
