@@ -22,7 +22,11 @@
 }
 
 body {
-  background: radial-gradient(ellipse at 50% 0%, #16141f 0%, #0d0b14 40%, #0a0a0f 100%);
+  background:
+    radial-gradient(ellipse at 50% -20%, rgba(201, 168, 76, 0.12) 0%, transparent 60%),
+    radial-gradient(ellipse at 0% 100%, rgba(139, 90, 20, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 100% 80%, rgba(201, 168, 76, 0.06) 0%, transparent 40%),
+    linear-gradient(180deg, #0f0d0a 0%, #0a0908 50%, #080706 100%);
   background-attachment: fixed;
   color: #ededed;
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
