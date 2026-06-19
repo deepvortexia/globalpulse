@@ -48,19 +48,32 @@ export default function NewsGrid({ articles, language }: NewsGridProps) {
 
   return (
     <div
-      ref={containerRef}
-      className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
+      className="rounded-2xl p-2 sm:p-4"
+      style={{
+        backgroundImage:
+          "radial-gradient(ellipse at center, #1a1a24 0%, #0a0a0f 70%)",
+      }}
     >
-      {articles.map((article, index) => (
-        <div
-          key={article.id}
-          data-reveal
-          className="gv-reveal"
-          style={{ transitionDelay: `${(index % STAGGER_WINDOW) * STAGGER_MS}ms` }}
-        >
-          <NewsCard article={article} language={language} />
-        </div>
-      ))}
+      <div
+        ref={containerRef}
+        className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
+      >
+        {articles.map((article, index) => (
+          <div
+            key={article.id}
+            data-reveal
+            className="gv-reveal"
+            style={{ transitionDelay: `${(index % STAGGER_WINDOW) * STAGGER_MS}ms` }}
+          >
+            {/* First card of each 3-col row sits slightly forward. */}
+            <NewsCard
+              article={article}
+              language={language}
+              featured={index % 3 === 0}
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

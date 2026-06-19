@@ -8,6 +8,7 @@ import type { Article, Language } from "@/types";
 interface NewsCardProps {
   article: Article;
   language: Language;
+  featured?: boolean;
 }
 
 const CATEGORY_LABELS: Record<string, Record<Language, string>> = {
@@ -31,9 +32,10 @@ function formatPublished(publishedAt: string, language: Language): string {
   });
 }
 
-export default function NewsCard({ article, language }: NewsCardProps) {
+export default function NewsCard({ article, language, featured = false }: NewsCardProps) {
   const cardRef = useRef<HTMLAnchorElement>(null);
   const [tilt, setTilt] = useState({ rotateX: 0, rotateY: 0 });
+  const [hovering, setHovering] = useState(false);
 
   function handleMouseMove(event: React.MouseEvent<HTMLAnchorElement>) {
     const card = cardRef.current;
@@ -41,6 +43,7 @@ export default function NewsCard({ article, language }: NewsCardProps) {
     const rect = card.getBoundingClientRect();
     const px = (event.clientX - rect.left) / rect.width; // 0..1
     const py = (event.clientY - rect.top) / rect.height; // 0..1
+    setHovering(true);
     setTilt({
       rotateX: (0.5 - py) * 2 * MAX_TILT,
       rotateY: (px - 0.5) * 2 * MAX_TILT,
@@ -48,8 +51,13 @@ export default function NewsCard({ article, language }: NewsCardProps) {
   }
 
   function handleMouseLeave() {
+    setHovering(false);
     setTilt({ rotateX: 0, rotateY: 0 });
   }
+
+  // Featured cards sit slightly forward; hovering lifts any card to 1.03.
+  const baseScale = featured ? 1.02 : 1;
+  const scale = hovering ? 1.03 : baseScale;
 
   const time = formatPublished(article.publishedAt, language);
 
@@ -62,9 +70,14 @@ export default function NewsCard({ article, language }: NewsCardProps) {
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       style={{
-        transform: `perspective(1000px) rotateX(${tilt.rotateX}deg) rotateY(${tilt.rotateY}deg)`,
+        transform: `perspective(1000px) rotateX(${tilt.rotateX}deg) rotateY(${tilt.rotateY}deg) scale(${scale})`,
+        // Fast follow while tracking the cursor, slower easing back to rest.
+        transition: hovering
+          ? "transform 0.1s ease, box-shadow 0.3s ease, border-color 0.3s ease"
+          : "transform 0.4s ease, box-shadow 0.3s ease, border-color 0.3s ease",
+        boxShadow: hovering ? "0 0 30px rgba(201, 168, 76, 0.15)" : "none",
       }}
-      className="group flex h-full flex-col gap-3 rounded-xl border border-gv-border bg-gv-card p-5 transition-[border-color,box-shadow] duration-200 [transform-style:preserve-3d] hover:border-gv-gold hover:shadow-lg hover:shadow-black/40"
+      className="group flex h-full flex-col gap-3 rounded-xl border border-gv-border bg-gv-card p-5 [transform-style:preserve-3d] hover:border-gv-gold"
     >
       <span className="self-start rounded-full bg-gv-gold/10 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-gv-gold">
         {categoryLabel(article.category, language)}

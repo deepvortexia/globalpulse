@@ -7,8 +7,8 @@ import NewsTicker from "@/components/NewsTicker";
 import NewsGrid from "@/components/NewsGrid";
 
 const UI_TEXT: Record<Language, { latest: string; loading: string; empty: string }> = {
-  en: { latest: "Latest Headlines", loading: "Loading the latest news…", empty: "No stories available right now." },
-  fr: { latest: "Derniers titres", loading: "Chargement des dernières actualités…", empty: "Aucun article disponible pour le moment." },
+  en: { latest: "World · Right Now", loading: "Loading the latest news…", empty: "No stories available right now." },
+  fr: { latest: "Le Monde · En Direct", loading: "Chargement des dernières actualités…", empty: "Aucun article disponible pour le moment." },
 };
 
 export default function Home() {
@@ -52,9 +52,12 @@ export default function Home() {
       <NewsTicker headlines={headlines} />
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-10 sm:px-6">
-        <h1 className="mb-8 font-display text-3xl font-bold tracking-tight text-white">
-          {text.latest}
-        </h1>
+        <div className="mb-8">
+          <h1 className="font-display text-3xl font-bold tracking-tight text-white">
+            {text.latest}
+          </h1>
+          <span className="mt-3 block h-0.5 w-20 rounded-full bg-gradient-to-r from-gv-gold to-transparent" />
+        </div>
 
         {newsError && (
           <p className="rounded-lg border border-red-900/50 bg-red-950/30 p-4 text-red-300">
