@@ -114,40 +114,40 @@ body::before {
   }
 }
 
-/* ── Breaking news sidebar: slide in, card-flip out ──────────────────────── */
-@keyframes slide-in-right {
+/* ── Breaking news banner: slide down in, slide up out ───────────────────── */
+@keyframes banner-slide-down {
   from {
-    transform: translateX(110%);
+    transform: translateY(-100%);
     opacity: 0;
   }
   to {
-    transform: translateX(0);
+    transform: translateY(0);
     opacity: 1;
   }
 }
 
-@keyframes card-flip-out {
+@keyframes banner-slide-up {
   from {
-    transform: perspective(600px) rotateY(0deg);
+    transform: translateY(0);
     opacity: 1;
   }
   to {
-    transform: perspective(600px) rotateY(-90deg);
+    transform: translateY(-100%);
     opacity: 0;
   }
 }
 
-.animate-slide-in-right {
-  animation: slide-in-right 0.5s ease-out;
+.animate-banner-slide-down {
+  animation: banner-slide-down 0.5s ease-out;
 }
 
-.animate-card-flip-out {
-  animation: card-flip-out 0.4s ease-in forwards;
+.animate-banner-slide-up {
+  animation: banner-slide-up 0.5s ease-in forwards;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-slide-in-right,
-  .animate-card-flip-out {
+  .animate-banner-slide-down,
+  .animate-banner-slide-up {
     animation: none;
   }
 }

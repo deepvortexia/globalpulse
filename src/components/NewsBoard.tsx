@@ -44,7 +44,7 @@ export default function NewsBoard({ articles, error }: NewsBoardProps) {
 
       <BreakingNewsFeed articles={articles} />
 
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-10 sm:px-6 lg:pr-[300px]">
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-10 sm:px-6">
         <div className="mb-8">
           <h1 className="font-display text-3xl font-bold tracking-tight text-white">
             {text.latest}
