@@ -5,6 +5,7 @@ import type { Article, Language } from "@/types";
 import Header from "@/components/Header";
 import NewsTicker from "@/components/NewsTicker";
 import NewsGrid from "@/components/NewsGrid";
+import BreakingNewsFeed from "@/components/BreakingNewsFeed";
 
 interface NewsBoardProps {
   articles: Article[];
@@ -41,7 +42,9 @@ export default function NewsBoard({ articles, error }: NewsBoardProps) {
       <Header language={language} onLanguageChange={setLanguage} />
       <NewsTicker headlines={headlines} />
 
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-10 sm:px-6">
+      <BreakingNewsFeed articles={articles} />
+
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-10 sm:px-6 lg:pr-[300px]">
         <div className="mb-8">
           <h1 className="font-display text-3xl font-bold tracking-tight text-white">
             {text.latest}
