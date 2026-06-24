@@ -9,11 +9,12 @@ type ArticleCategory = Exclude<CategoryId, "all">;
 // overrides each source's static category, so a single feed can spread across
 // topics (e.g. a war story from a generic "world" source lands in conflicts).
 function inferCategory(title: string, description: string): ArticleCategory {
-  const text = (title + " " + (description ?? "")).toLowerCase();
-  if (/war|military|attack|missile|troops|bomb|combat|ceasefire|weapon|army|nato|conflict|terrorism|isis|taliban|hamas|hezbollah|hostage/i.test(text)) return "conflicts";
+  const rawText = title + " " + (description ?? "");
+  const text = rawText.toLowerCase();
+  if (/\bwar\b|military|attack|missile|troops|bomb|combat|ceasefire|weapon|army|nato|conflict|terrorism|isis|taliban|hamas|hezbollah|hostage/i.test(text)) return "conflicts";
   if (/climate|carbon|emission|temperature|glacier|flood|wildfire|hurricane|drought|renewable|solar|wind energy|pollution|deforestation/i.test(text)) return "climate";
-  if (/\bai\b|artificial intelligence|robot|tech|software|apple|google|microsoft|meta|openai|startup|cyber|hack|chip|semiconductor|quantum|space|nasa|rocket|satellite/i.test(text)) return "science";
-  if (/health|disease|virus|cancer|vaccine|hospital|doctor|medicine|mental health|obesity|drug|pandemic|WHO|CDC/i.test(text)) return "health";
+  if (/\bai\b|artificial intelligence|robot|\btech\b|software|apple|google|microsoft|meta|openai|startup|cyber|hack|chip|semiconductor|quantum|space|nasa|rocket|satellite/i.test(text)) return "science";
+  if (/health|disease|virus|cancer|vaccine|hospital|doctor|medicine|mental health|obesity|drug|pandemic/i.test(text) || /\bWHO\b|\bCDC\b/.test(rawText)) return "health";
   if (/election|president|minister|parliament|senate|congress|democrat|republican|vote|policy|law|court|supreme|government|political/i.test(text)) return "politics";
   if (/economy|market|stock|gdp|inflation|recession|bank|trade|tariff|crypto|bitcoin|dollar|euro|interest rate|unemployment/i.test(text)) return "economy";
   if (/football|soccer|nba|nfl|nhl|tennis|golf|olympics|world cup|championship|tournament|athlete|coach|stadium|league/i.test(text)) return "sports";
