@@ -25,6 +25,7 @@ const UI_TEXT: Record<Language, { latest: string; empty: string }> = {
 export default function NewsBoard({ articles, error }: NewsBoardProps) {
   const [language, setLanguage] = useState<Language>("en");
   const [categoryId, setCategoryId] = useState<CategoryId>("all");
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Articles carry a per-source language; show those matching the toggle,
   // falling back to everything if the selected language has no stories yet.
@@ -61,7 +62,11 @@ export default function NewsBoard({ articles, error }: NewsBoardProps) {
 
   return (
     <div className="flex min-h-screen flex-col text-white">
-      <Header language={language} onLanguageChange={setLanguage} />
+      <Header
+        language={language}
+        onLanguageChange={setLanguage}
+        onMenuClick={() => setMenuOpen(true)}
+      />
       <NewsTicker headlines={headlines} />
 
       <BreakingNewsFeed articles={articles} />
@@ -71,6 +76,8 @@ export default function NewsBoard({ articles, error }: NewsBoardProps) {
         onChange={setCategoryId}
         counts={counts}
         language={language}
+        menuOpen={menuOpen}
+        onMenuClose={() => setMenuOpen(false)}
       />
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-10 sm:px-6">

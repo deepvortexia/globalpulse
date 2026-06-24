@@ -128,7 +128,7 @@ export default function BreakingNewsFeed({ articles }: BreakingNewsFeedProps) {
           : undefined,
       }}
     >
-      <div className="mx-auto flex h-20 max-w-7xl items-center gap-4 px-4 sm:px-6">
+      <div className="mx-auto flex h-[60px] max-w-7xl items-center gap-3 px-4 sm:h-20 sm:gap-4 sm:px-6">
         {/* Left: score badge + emoji */}
         <div className="flex flex-shrink-0 items-center gap-2">
           <span
@@ -148,18 +148,18 @@ export default function BreakingNewsFeed({ articles }: BreakingNewsFeedProps) {
           </span>
 
           {isBreaking && (
-            <span className="flex-shrink-0 rounded-full bg-red-600 px-2.5 py-0.5 text-xs font-bold tracking-wide text-white">
+            <span className="hidden flex-shrink-0 rounded-full bg-red-600 px-2.5 py-0.5 text-xs font-bold tracking-wide text-white sm:inline-block">
               ⚡ BREAKING
             </span>
           )}
 
-          <span className="truncate font-display text-base font-semibold text-white transition-colors group-hover:text-gv-gold">
+          <span className="truncate font-display text-sm font-semibold text-white transition-colors group-hover:text-gv-gold sm:text-base">
             {article.title}
           </span>
         </div>
 
-        {/* Right: source + live + time */}
-        <div className="flex flex-shrink-0 items-center gap-2 text-xs text-gv-muted">
+        {/* Right: source + live + time (hidden on mobile) */}
+        <div className="hidden flex-shrink-0 items-center gap-2 text-xs text-gv-muted sm:flex">
           <span className="hidden font-medium sm:inline">{article.source}</span>
           <span className="hidden sm:inline" aria-hidden>
             ·

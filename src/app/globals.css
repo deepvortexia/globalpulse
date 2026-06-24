@@ -30,6 +30,8 @@ body {
   background-attachment: fixed;
   color: #ededed;
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  /* Guard against any stray child width causing a horizontal scrollbar. */
+  overflow-x: hidden;
 }
 
 /* Very subtle CSS-only grain for depth. */
@@ -82,8 +84,15 @@ body::before {
   }
 }
 
+/* Slower on mobile for readability; speeds up from the tablet breakpoint. */
 .animate-ticker {
-  animation: ticker-scroll 40s linear infinite;
+  animation: ticker-scroll 50s linear infinite;
+}
+
+@media (min-width: 640px) {
+  .animate-ticker {
+    animation-duration: 40s;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -9,12 +9,23 @@ interface CategoryNavProps {
   onChange: (id: CategoryId) => void;
   counts: Record<CategoryId, number>;
   language: Language;
+  // Mobile drawer state is owned by the parent (the hamburger lives in the
+  // Header), so the drawer is fully controlled here.
+  menuOpen: boolean;
+  onMenuClose: () => void;
 }
 
 const DRAWER_ANIM_MS = 300;
 
-export default function CategoryNav({ activeId, onChange, counts, language }: CategoryNavProps) {
-  // ── Desktop: measured sliding underline ────────────────────────────────
+export default function CategoryNav({
+  activeId,
+  onChange,
+  counts,
+  language,
+  menuOpen,
+  onMenuClose,
+}: CategoryNavProps) {
+  // ── Tablet/desktop: measured sliding underline ─────────────────────────
   const btnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const [underline, setUnderline] = useState({ left: 0, width: 0 });
 
@@ -28,39 +39,40 @@ export default function CategoryNav({ activeId, onChange, counts, language }: Ca
     return () => window.removeEventListener("resize", measure);
   }, [activeId, language]);
 
-  // ── Mobile: drawer open/close with exit animation ──────────────────────
-  const [open, setOpen] = useState(false);
+  // ── Mobile drawer: keep mounted through the slide-out animation ────────
+  const [mounted, setMounted] = useState(false);
   const [closing, setClosing] = useState(false);
 
-  function closeDrawer() {
-    setClosing(true);
-  }
-
   useEffect(() => {
-    if (!closing) return;
-    const timer = setTimeout(() => {
-      setOpen(false);
+    if (menuOpen) {
+      setMounted(true);
       setClosing(false);
-    }, DRAWER_ANIM_MS);
-    return () => clearTimeout(timer);
-  }, [closing]);
+    } else if (mounted) {
+      setClosing(true);
+      const timer = setTimeout(() => {
+        setMounted(false);
+        setClosing(false);
+      }, DRAWER_ANIM_MS);
+      return () => clearTimeout(timer);
+    }
+  }, [menuOpen, mounted]);
 
   // Lock body scroll while the drawer is mounted.
   useEffect(() => {
-    if (!open) return;
+    if (!mounted) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = previous;
     };
-  }, [open]);
+  }, [mounted]);
 
   return (
     <>
-      {/* ── DESKTOP: horizontal scrollable pill row ─────────────────────── */}
+      {/* ── TABLET/DESKTOP: horizontal scrollable pill row ──────────────── */}
       <nav
         aria-label="Categories"
-        className="hidden border-b border-gv-border bg-gv-bg/60 backdrop-blur-md md:block"
+        className="hidden border-b border-gv-border bg-gv-bg/60 backdrop-blur-md sm:block"
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="no-scrollbar relative flex gap-1 overflow-x-auto py-2.5">
@@ -103,22 +115,12 @@ export default function CategoryNav({ activeId, onChange, counts, language }: Ca
         </div>
       </nav>
 
-      {/* ── MOBILE/TABLET: burger button ────────────────────────────────── */}
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label="Open categories"
-        className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gv-gold text-2xl text-gv-bg shadow-lg shadow-black/40 transition-transform active:scale-95 md:hidden"
-      >
-        <span aria-hidden>☰</span>
-      </button>
-
-      {/* ── MOBILE/TABLET: slide-in drawer ──────────────────────────────── */}
-      {open && (
-        <div className="fixed inset-0 z-[60] md:hidden">
+      {/* ── MOBILE: slide-in drawer (opened from the Header hamburger) ───── */}
+      {mounted && (
+        <div className="fixed inset-0 z-[60] sm:hidden">
           {/* Backdrop */}
           <div
-            onClick={closeDrawer}
+            onClick={onMenuClose}
             className={`absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${
               closing ? "opacity-0" : "opacity-100"
             }`}
@@ -126,7 +128,7 @@ export default function CategoryNav({ activeId, onChange, counts, language }: Ca
 
           {/* Drawer panel */}
           <div
-            className={`absolute left-0 top-0 flex h-full w-72 max-w-[80%] flex-col border-r border-gv-border bg-gv-bg ${
+            className={`absolute left-0 top-0 flex h-full w-[280px] max-w-[85%] flex-col border-r border-gv-border bg-gv-bg ${
               closing ? "animate-drawer-slide-out" : "animate-drawer-slide-in"
             }`}
           >
@@ -136,9 +138,9 @@ export default function CategoryNav({ activeId, onChange, counts, language }: Ca
               </span>
               <button
                 type="button"
-                onClick={closeDrawer}
+                onClick={onMenuClose}
                 aria-label="Close categories"
-                className="text-xl text-gv-muted transition-colors hover:text-white"
+                className="flex h-11 w-11 items-center justify-center text-xl text-gv-muted transition-colors hover:text-white"
               >
                 <span aria-hidden>✕</span>
               </button>
@@ -153,10 +155,10 @@ export default function CategoryNav({ activeId, onChange, counts, language }: Ca
                     type="button"
                     onClick={() => {
                       onChange(cat.id);
-                      closeDrawer();
+                      onMenuClose();
                     }}
                     aria-pressed={active}
-                    className={`flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium transition-colors ${
+                    className={`flex min-h-[44px] w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium transition-colors ${
                       active
                         ? "bg-gv-gold/10 text-gv-gold"
                         : "text-gv-muted hover:bg-white/5 hover:text-white"
