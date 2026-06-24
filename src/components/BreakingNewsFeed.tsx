@@ -138,6 +138,17 @@ export default function BreakingNewsFeed({ articles, language }: BreakingNewsFee
     return () => clearTimeout(exitTimer);
   }, [exiting]);
 
+  // Expose the banner's reserved height as a CSS variable so NewsBoard's
+  // main content can offset its padding-top without prop-drilling banner
+  // visibility/height down through the component tree.
+  useEffect(() => {
+    const extra = current && !exiting ? 68 : 0;
+    document.documentElement.style.setProperty(
+      "--banner-padding-top",
+      `${bannerTop + extra}px`,
+    );
+  }, [bannerTop, current, exiting]);
+
   if (!current) return null;
 
   const { article, score, emoji } = current;
@@ -151,23 +162,27 @@ export default function BreakingNewsFeed({ articles, language }: BreakingNewsFee
       className="group block w-full cursor-pointer overflow-hidden border-b border-gv-border hover:brightness-110"
       style={{
         position: "fixed",
+        top: `${bannerTop}px`,
         left: 0,
         right: 0,
-        zIndex: 9999,
-        top: `${bannerTop}px`,
+        zIndex: 40,
         transform: exiting ? "translateY(-110%)" : "translateY(0)",
         transition: "transform 0.3s ease",
+        WebkitTransform: exiting ? "translateY(-110%)" : "translateY(0)",
+        WebkitTransition: "-webkit-transform 0.3s ease",
+        willChange: "transform",
         backgroundColor: "#0d0b10",
         backgroundImage: isBreaking
           ? "radial-gradient(ellipse at 50% 50%, rgba(220, 38, 38, 0.18) 0%, transparent 70%)"
           : undefined,
+        borderLeft: "3px solid #C9A84C",
       }}
     >
-      <div className="mx-auto flex h-[60px] max-w-7xl items-center gap-3 px-4 sm:h-20 sm:gap-4 sm:px-6">
+      <div className="mx-auto flex min-h-[64px] max-w-7xl items-center gap-3 px-4 py-2 sm:min-h-[48px] sm:gap-4 sm:px-6">
         {/* Left: score badge + emoji */}
         <div className="flex flex-shrink-0 items-center gap-2">
           <span
-            className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${SCORE_BADGE_CLASSES[score]}`}
+            className={`flex h-8 w-8 min-h-[32px] min-w-[32px] items-center justify-center rounded-full text-sm font-bold ${SCORE_BADGE_CLASSES[score]}`}
           >
             {score}
           </span>
@@ -188,23 +203,25 @@ export default function BreakingNewsFeed({ articles, language }: BreakingNewsFee
             </span>
           )}
 
-          <span className="truncate font-display text-sm font-semibold text-white transition-colors group-hover:text-gv-gold sm:text-base">
+          <span className="line-clamp-2 whitespace-normal font-display text-[14px] font-semibold text-white transition-colors group-hover:text-gv-gold sm:text-[13px]">
             {article.title}
           </span>
         </div>
 
-        {/* Right: source + live + time (hidden on mobile) */}
-        <div className="hidden flex-shrink-0 items-center gap-2 text-xs text-gv-muted sm:flex">
-          <span className="hidden font-medium sm:inline">{article.source}</span>
+        {/* Right: source (always visible) + live + time (hidden on mobile) */}
+        <div className="flex flex-shrink-0 items-center gap-2 text-xs text-gv-muted">
+          <span className="font-medium opacity-70">{article.source}</span>
           <span className="hidden sm:inline" aria-hidden>
             ·
           </span>
-          <span className="flex items-center gap-1 font-semibold text-red-500">
+          <span className="hidden items-center gap-1 font-semibold text-red-500 sm:flex">
             <span className="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden />
             LIVE
           </span>
-          <span aria-hidden>·</span>
-          <span>{timeAgo(article.publishedAt)}</span>
+          <span className="hidden sm:inline" aria-hidden>
+            ·
+          </span>
+          <span className="hidden sm:inline">{timeAgo(article.publishedAt)}</span>
         </div>
       </div>
 

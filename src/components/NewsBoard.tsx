@@ -80,7 +80,10 @@ export default function NewsBoard({ articles, error }: NewsBoardProps) {
         onMenuClose={() => setMenuOpen(false)}
       />
 
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 pt-[80px] pb-10 sm:px-6">
+      <main
+        className="mx-auto w-full max-w-7xl flex-1 px-4 pb-10 sm:px-6"
+        style={{ paddingTop: "var(--banner-padding-top, 96px)" }}
+      >
         <div className="mb-8">
           <h1 className="font-display text-xl font-bold tracking-tight text-white sm:text-3xl">
             {text.latest}

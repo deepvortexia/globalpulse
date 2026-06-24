@@ -120,18 +120,23 @@ export default function CategoryNav({
 
       {/* ── MOBILE: slide-in drawer (opened from the Header hamburger) ───── */}
       {mounted && (
+        // z-[60] on the wrapper itself matters: position:fixed always creates
+        // its own stacking context even with z-index:auto, so without an
+        // explicit value here the whole drawer would paint *behind* any
+        // sibling with a positive z-index (e.g. the breaking news banner),
+        // regardless of the z-50/z-60 set on its children below.
         <div className="fixed inset-0 z-[60] sm:hidden">
           {/* Backdrop */}
           <div
             onClick={onMenuClose}
-            className={`absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${
+            className={`absolute inset-0 z-50 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${
               closing ? "opacity-0" : "opacity-100"
             }`}
           />
 
           {/* Drawer panel */}
           <div
-            className={`absolute left-0 top-0 flex h-full w-[280px] max-w-[85%] flex-col border-r border-gv-border bg-gv-bg ${
+            className={`absolute left-0 top-0 z-[60] flex h-full w-[280px] max-w-[85%] flex-col border-r border-gv-border bg-gv-bg ${
               closing ? "animate-drawer-slide-out" : "animate-drawer-slide-in"
             }`}
           >
