@@ -22,14 +22,16 @@ function inferCategory(title: string, description: string): ArticleCategory {
   if (/\b(artificial intelligence|machine learning|robotics|software|cybersecurity|semiconductor|quantum computing|space mission|nasa|rocket launch|satellite|genome|crispr|neuroscience|physics|astronomy)\b/.test(text)) return "science";
   if (/\b(apple inc|google|microsoft|meta platforms|openai|nvidia|tesla|spacex|amazon web|startup funding|tech company|silicon valley)\b/.test(text)) return "science";
 
-  // HEALTH
-  if (/\b(pandemic|epidemic|virus|cancer treatment|vaccine|hospital|surgeon|mental health|obesity|pharmaceutical|drug approval|clinical trial|who announced|cdc reported|public health|mortality rate)\b/.test(text)) return "health";
+  // HEALTH — broadened to single keywords (was too strict → 0 articles).
+  // NOTE: "who" is intentionally matched as "world health organization" only;
+  // a bare \bwho\b matches the everyday word "who" on lowercased text.
+  if (/\b(health|disease|virus|cancer|vaccine|hospital|doctor|medicine|drug|pandemic|epidemic|world health organization|cdc|outbreak|medical|patient|surgeon|mental health|pharmaceutical|clinical trial|public health)\b/.test(text)) return "health";
 
   // POLITICS — strict: avoid catching general news
   if (/\b(election|presidential|parliament|senate|congress|democrat|republican|ballot|legislation|minister|prime minister|supreme court|white house|kremlin|sanctions|diplomatic|geopolitics)\b/.test(text)) return "politics";
 
-  // ECONOMY — strict: financial topics only
-  if (/\b(gdp|inflation|recession|central bank|federal reserve|interest rate|stock market|trade deficit|tariff|cryptocurrency|bitcoin|investment fund|private equity|venture capital|ipo|quarterly earnings|unemployment rate)\b/.test(text)) return "economy";
+  // ECONOMY — broadened to single keywords (was too strict → 0 articles).
+  if (/\b(market|stock|inflation|recession|trade|tariff|bank|dollar|euro|fund|investor|gdp|economic|economy|financial|finance|budget|debt|central bank|federal reserve|interest rate|cryptocurrency|bitcoin|earnings|unemployment)\b/.test(text)) return "economy";
 
   // SPORTS — very specific, avoid "world cup of coffee" type false positives
   if (/\b(nba|nfl|nhl|mlb|premier league|champions league|world cup final|olympic games|grand slam|tour de france|formula 1|fifa|uefa|transfer fee|match result|scored|goalkeeper|touchdown|slam dunk)\b/.test(text)) return "sports";

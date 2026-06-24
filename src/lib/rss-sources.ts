@@ -65,4 +65,28 @@ export const RSS_SOURCES: RSSSource[] = [
   { name: "Le Monde Santé", url: "https://www.lemonde.fr/sante/rss_full.xml", language: "fr", category: "health", country: "FR" },
   { name: "Le Monde Climat", url: "https://www.lemonde.fr/climat/rss_full.xml", language: "fr", category: "climate", country: "FR" },
   { name: "Sciences et Avenir", url: "https://www.sciencesetavenir.fr/rss.xml", language: "fr", category: "science", country: "FR" },
+
+  // ── Added batch (all curl-verified 200 + valid XML) ──────────────────────
+  // Sports (EN)
+  { name: "Sky Sports", url: "https://www.skysports.com/rss/12040", language: "en", category: "sports", country: "UK" },
+  { name: "BBC Football", url: "https://feeds.bbci.co.uk/sport/football/rss.xml", language: "en", category: "sports", country: "UK" },
+
+  // Science / Tech (EN)
+  { name: "BBC Technology", url: "https://feeds.bbci.co.uk/news/technology/rss.xml", language: "en", category: "science", country: "UK" },
+
+  // Health (EN)
+  { name: "BBC Health", url: "https://feeds.bbci.co.uk/news/health/rss.xml", language: "en", category: "health", country: "UK" },
+
+  // Business / Economy (EN)
+  { name: "BBC Business", url: "https://feeds.bbci.co.uk/news/business/rss.xml", language: "en", category: "business", country: "UK" },
+  { name: "CNN Business", url: "http://rss.cnn.com/rss/money_news_international.rss", language: "en", category: "business", country: "US" },
+
+  // Wire agency (EN) — via Google News; may be empty when query has no 24h hits
+  { name: "AFP (via Google News)", url: "https://news.google.com/rss/search?q=when:24h+allinurl:afp.com", language: "en", category: "world", country: "FR" },
+
+  // French sources
+  { name: "franceinfo", url: "https://www.francetvinfo.fr/titres.rss", language: "fr", category: "world", country: "FR" },
+  { name: "franceinfo Monde", url: "https://www.francetvinfo.fr/monde.rss", language: "fr", category: "world", country: "FR" },
+  { name: "RFI Sport", url: "https://www.rfi.fr/fr/sports/rss", language: "fr", category: "sports", country: "FR" },
+  { name: "Le Figaro International", url: "https://www.lefigaro.fr/rss/figaro_international.xml", language: "fr", category: "world", country: "FR" },
 ];
