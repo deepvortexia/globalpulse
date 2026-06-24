@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import type { Article, CategoryId, Language } from "@/types";
 import { CATEGORIES } from "@/lib/categories";
 import Header from "@/components/Header";
-import NewsTicker from "@/components/NewsTicker";
 import NewsGrid from "@/components/NewsGrid";
 import CategoryNav from "@/components/CategoryNav";
 
@@ -19,8 +18,8 @@ const UI_TEXT: Record<Language, { latest: string; empty: string }> = {
 };
 
 // Client boundary that owns the language toggle and everything that reacts to
-// it (header, ticker, heading, grid). Articles arrive pre-fetched from the
-// Server Component as props — no data fetching happens here.
+// it (header, heading, grid). Articles arrive pre-fetched from the Server
+// Component as props — no data fetching happens here.
 export default function NewsBoard({ articles, error }: NewsBoardProps) {
   const [language, setLanguage] = useState<Language>("en");
   const [categoryId, setCategoryId] = useState<CategoryId>("all");
@@ -52,11 +51,6 @@ export default function NewsBoard({ articles, error }: NewsBoardProps) {
     return languageArticles.filter((article) => article.category === categoryId);
   }, [languageArticles, categoryId]);
 
-  const headlines = useMemo(
-    () => visibleArticles.slice(0, 15).map((article) => article.title),
-    [visibleArticles],
-  );
-
   const text = UI_TEXT[language];
 
   return (
@@ -67,7 +61,6 @@ export default function NewsBoard({ articles, error }: NewsBoardProps) {
         onMenuClick={() => setMenuOpen(true)}
         articles={articles}
       />
-      <NewsTicker headlines={headlines} />
 
       <CategoryNav
         activeId={categoryId}

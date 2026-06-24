@@ -77,34 +77,6 @@ body::before {
   background: var(--color-gv-gold-light);
 }
 
-/* ── News ticker: seamless infinite left-scroll ──────────────────────────── */
-@keyframes ticker-scroll {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    /* The track holds two identical copies; -50% lands exactly on the seam. */
-    transform: translateX(-50%);
-  }
-}
-
-/* Slower on mobile for readability; speeds up from the tablet breakpoint. */
-.animate-ticker {
-  animation: ticker-scroll 50s linear infinite;
-}
-
-@media (min-width: 640px) {
-  .animate-ticker {
-    animation-duration: 40s;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .animate-ticker {
-    animation: none;
-  }
-}
-
 /* ── NewsGrid scroll-in reveal ───────────────────────────────────────────── */
 .gv-reveal {
   opacity: 0;
