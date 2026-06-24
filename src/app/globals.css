@@ -145,9 +145,26 @@ body::before {
   animation: banner-slide-up 0.5s ease-in forwards;
 }
 
+/* Breaking-banner time-remaining bar: shrink full width → 0 (origin left).
+   Duration is set inline per item so it matches that score's hold time. */
+@keyframes banner-progress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.animate-banner-progress {
+  transform-origin: left;
+  animation: banner-progress linear forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-banner-slide-down,
-  .animate-banner-slide-up {
+  .animate-banner-slide-up,
+  .animate-banner-progress {
     animation: none;
   }
 }

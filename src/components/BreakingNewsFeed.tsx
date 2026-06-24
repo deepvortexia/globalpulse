@@ -17,10 +17,11 @@ interface ScoredArticle {
   emoji: string;
 }
 
-const QUEUE_INTERVAL_MS = 8000;
+const QUEUE_INTERVAL_MS = 12000;
 const MAX_QUEUE = 5;
-const HOLD_MS = 5000;
-const HOLD_MS_BREAKING = 8000;
+// Per-score on-screen hold duration; higher scores linger longer so a
+// "breaking" (3) item gets the most reading time.
+const HOLD_MS: Record<Score, number> = { 1: 8000, 2: 12000, 3: 18000 };
 const EXIT_ANIM_MS = 500;
 
 const EMOJI_POOL = ["📰", "🌍", "💰", "🏛️", "📊", "🔥", "🚨", "⚡"];
@@ -66,7 +67,7 @@ export default function BreakingNewsFeed({ articles }: BreakingNewsFeedProps) {
   const [exiting, setExiting] = useState(false);
   const keyRef = useRef(0);
 
-  // Producer: every 8s, score a random article and append it to the queue.
+  // Producer: every 12s, score a random article and append it to the queue.
   useEffect(() => {
     if (articles.length === 0) return;
 
@@ -96,7 +97,7 @@ export default function BreakingNewsFeed({ articles }: BreakingNewsFeedProps) {
   // effect above advances to the next queued item.
   useEffect(() => {
     if (!current) return;
-    const holdMs = current.score === 3 ? HOLD_MS_BREAKING : HOLD_MS;
+    const holdMs = HOLD_MS[current.score];
     const holdTimer = setTimeout(() => setExiting(true), holdMs);
     return () => clearTimeout(holdTimer);
   }, [current]);
@@ -113,8 +114,11 @@ export default function BreakingNewsFeed({ articles }: BreakingNewsFeedProps) {
   const isBreaking = score === 3;
 
   return (
-    <div
-      className={`w-full overflow-hidden border-b border-gv-border ${
+    <a
+      href={article.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`group relative block w-full cursor-pointer overflow-hidden border-b border-gv-border transition duration-200 hover:brightness-110 ${
         exiting ? "animate-banner-slide-up" : "animate-banner-slide-down"
       }`}
       style={{
@@ -149,14 +153,9 @@ export default function BreakingNewsFeed({ articles }: BreakingNewsFeedProps) {
             </span>
           )}
 
-          <a
-            href={article.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="truncate font-display text-base font-semibold text-white hover:text-gv-gold"
-          >
+          <span className="truncate font-display text-base font-semibold text-white transition-colors group-hover:text-gv-gold">
             {article.title}
-          </a>
+          </span>
         </div>
 
         {/* Right: source + live + time */}
@@ -173,6 +172,16 @@ export default function BreakingNewsFeed({ articles }: BreakingNewsFeedProps) {
           <span>{timeAgo(article.publishedAt)}</span>
         </div>
       </div>
-    </div>
+
+      {/* Score-3 only: time-remaining bar shrinking from full width to 0 over
+          the hold duration, signalling how long the breaking item stays. */}
+      {isBreaking && (
+        <span
+          aria-hidden
+          className="animate-banner-progress absolute bottom-0 left-0 h-0.5 w-full bg-gv-gold"
+          style={{ animationDuration: `${HOLD_MS[score]}ms` }}
+        />
+      )}
+    </a>
   );
 }
