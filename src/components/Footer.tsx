@@ -7,7 +7,7 @@ interface FooterProps {
 
 const footerText: Record<
   Language,
-  { tagline: string; rights: string; soon: string; contact: string; about: string }
+  { tagline: string; rights: string; soon: string; contact: string; about: string; credit: string }
 > = {
   en: {
     tagline: "World news powered by AI",
@@ -15,6 +15,7 @@ const footerText: Record<
     soon: "Coming soon",
     contact: "Contact",
     about: "About",
+    credit: "Created by Yannick Boisclair · Powered by Claude (Anthropic)",
   },
   fr: {
     tagline: "L'actualité mondiale propulsée par l'IA",
@@ -22,6 +23,7 @@ const footerText: Record<
     soon: "Prochainement",
     contact: "Contact",
     about: "À propos",
+    credit: "Créé par Yannick Boisclair · Propulsé par Claude (Anthropic)",
   },
 };
 
@@ -65,6 +67,7 @@ export default function Footer({ language }: FooterProps) {
 
         {/* Copyright */}
         <p className="text-center text-xs opacity-60">{text.rights}</p>
+        <p className="text-center text-xs opacity-50">{text.credit}</p>
       </div>
     </footer>
   );
