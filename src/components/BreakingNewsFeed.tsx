@@ -126,11 +126,9 @@ export default function BreakingNewsFeed({ articles, language }: BreakingNewsFee
 
   return (
     <div
-      style={{
-        maxHeight: current && !exiting ? "72px" : "0px",
-        overflow: "hidden",
-        transition: "max-height 0.4s ease",
-      }}
+      className={`overflow-hidden transition-[max-height] duration-[400ms] ease-in-out ${
+        current && !exiting ? "max-h-[110px] sm:max-h-[72px]" : "max-h-0"
+      }`}
     >
       <a
         href={article.url}
@@ -142,18 +140,30 @@ export default function BreakingNewsFeed({ articles, language }: BreakingNewsFee
           backgroundImage: isBreaking
             ? "radial-gradient(ellipse at 50% 50%, rgba(220, 38, 38, 0.18) 0%, transparent 70%)"
             : undefined,
-          borderLeft: "3px solid #C9A84C",
-          borderBottom: "1px solid rgba(201,168,76,0.2)",
+          borderTop: "2px solid #C9A84C",
+          borderBottom: "2px solid #C9A84C",
         }}
       >
-        <div className="mx-auto flex min-h-[64px] max-w-7xl items-center gap-3 px-4 py-2 sm:min-h-[48px] sm:gap-4 sm:px-6">
-          {/* Left: emoji */}
-          <div className="flex flex-shrink-0 items-center gap-2">
-            <span className="text-xl">{emoji}</span>
+        <div className="mx-auto max-w-7xl px-4 py-2 sm:px-6">
+          {/* MOBILE layout: stacked */}
+          <div className="flex flex-col gap-1 sm:hidden">
+            <div className="flex items-center gap-2">
+              <span className="flex-shrink-0 text-xl">{emoji}</span>
+              <span className="line-clamp-2 whitespace-normal font-display text-sm font-semibold text-white">
+                {article.title}
+              </span>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-xs text-gv-muted opacity-60">
+              <span>{article.source}</span>
+              <span>·</span>
+              <span>{timeAgo(article.publishedAt)}</span>
+            </div>
           </div>
 
-          {/* Center: category + breaking badge + headline */}
-          <div className="flex min-w-0 flex-1 items-center gap-3">
+          {/* DESKTOP layout: single row */}
+          <div className="hidden min-h-[48px] items-center gap-4 sm:flex">
+            <span className="flex-shrink-0 text-xl">{emoji}</span>
+
             <span className="hidden flex-shrink-0 rounded-full bg-gv-gold/10 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-gv-gold sm:inline-block">
               {CATEGORY_LABELS[article.category] ?? article.category}
             </span>
@@ -164,25 +174,20 @@ export default function BreakingNewsFeed({ articles, language }: BreakingNewsFee
               </span>
             )}
 
-            <span className="line-clamp-2 whitespace-normal font-display text-[14px] font-semibold text-white transition-colors group-hover:text-gv-gold sm:text-[13px]">
+            <span className="line-clamp-1 flex-1 font-display text-sm font-semibold text-white transition-colors group-hover:text-gv-gold">
               {article.title}
             </span>
-          </div>
 
-          {/* Right: source + time always visible; live indicator desktop-only */}
-          <div className="flex flex-shrink-0 items-center gap-2 text-xs text-gv-muted">
-            <span className="font-medium opacity-70">{article.source}</span>
-            <span className="hidden sm:inline" aria-hidden>
-              ·
-            </span>
-            <span className="hidden items-center gap-1 font-semibold text-red-500 sm:flex">
-              <span className="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden />
-              LIVE
-            </span>
-            <span className="hidden sm:inline" aria-hidden>
-              ·
-            </span>
-            <span className="text-xs opacity-60">{timeAgo(article.publishedAt)}</span>
+            <div className="flex flex-shrink-0 items-center gap-2 text-xs text-gv-muted">
+              <span className="font-medium">{article.source}</span>
+              <span>·</span>
+              <span className="flex items-center gap-1 font-semibold text-red-500">
+                <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                LIVE
+              </span>
+              <span>·</span>
+              <span>{timeAgo(article.publishedAt)}</span>
+            </div>
           </div>
         </div>
 
