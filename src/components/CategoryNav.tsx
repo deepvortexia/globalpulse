@@ -75,7 +75,10 @@ export default function CategoryNav({
         className="hidden border-b border-gv-border bg-gv-bg/60 backdrop-blur-md sm:block"
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="no-scrollbar relative flex gap-1 overflow-x-auto py-2.5 pr-6">
+          <div
+            className="no-scrollbar relative flex gap-1 overflow-x-auto py-2.5 pr-12"
+            style={{ scrollPaddingRight: "48px" }}
+          >
             {CATEGORIES.map((cat) => {
               const active = cat.id === activeId;
               return (
