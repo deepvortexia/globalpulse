@@ -6,7 +6,6 @@ import { CATEGORIES } from "@/lib/categories";
 import Header from "@/components/Header";
 import NewsTicker from "@/components/NewsTicker";
 import NewsGrid from "@/components/NewsGrid";
-import BreakingNewsFeed from "@/components/BreakingNewsFeed";
 import CategoryNav from "@/components/CategoryNav";
 
 interface NewsBoardProps {
@@ -66,10 +65,9 @@ export default function NewsBoard({ articles, error }: NewsBoardProps) {
         language={language}
         onLanguageChange={setLanguage}
         onMenuClick={() => setMenuOpen(true)}
+        articles={articles}
       />
       <NewsTicker headlines={headlines} />
-
-      <BreakingNewsFeed articles={languageArticles} language={language} />
 
       <CategoryNav
         activeId={categoryId}
@@ -80,10 +78,7 @@ export default function NewsBoard({ articles, error }: NewsBoardProps) {
         onMenuClose={() => setMenuOpen(false)}
       />
 
-      <main
-        className="mx-auto w-full max-w-7xl flex-1 px-4 pb-10 sm:px-6"
-        style={{ paddingTop: "var(--banner-padding-top, 96px)" }}
-      >
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 pb-10 pt-6 sm:px-6">
         <div className="mb-8">
           <h1 className="font-display text-xl font-bold tracking-tight text-white sm:text-3xl">
             {text.latest}

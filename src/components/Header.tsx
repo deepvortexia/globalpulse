@@ -1,17 +1,24 @@
 "use client";
 
 import Image from "next/image";
-import type { Language } from "@/types";
+import type { Article, Language } from "@/types";
+import BreakingNewsFeed from "@/components/BreakingNewsFeed";
 
 interface HeaderProps {
   language: Language;
   onLanguageChange: (language: Language) => void;
   onMenuClick?: () => void;
+  articles: Article[];
 }
 
 const LANGUAGES: Language[] = ["fr", "en"];
 
-export default function Header({ language, onLanguageChange, onMenuClick }: HeaderProps) {
+export default function Header({
+  language,
+  onLanguageChange,
+  onMenuClick,
+  articles,
+}: HeaderProps) {
   return (
     <header className="sticky top-0 z-[70] border-b border-[rgba(201,168,76,0.2)] bg-gv-bg/90 backdrop-blur-md">
       <div className="mx-auto flex h-12 max-w-7xl items-center justify-between px-4 sm:h-16 sm:px-6">
@@ -75,6 +82,9 @@ export default function Header({ language, onLanguageChange, onMenuClick }: Head
           </div>
         </div>
       </div>
+
+      {/* Breaking news banner — lives here so it scrolls with sticky header */}
+      <BreakingNewsFeed articles={articles} language={language} />
     </header>
   );
 }

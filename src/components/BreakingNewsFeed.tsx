@@ -21,8 +21,9 @@ interface ScoredArticle {
 const QUEUE_INTERVAL_MS = 12000;
 const MAX_QUEUE = 5;
 // Per-score on-screen hold duration; higher scores linger longer so a
-// "breaking" (3) item gets the most reading time.
-const HOLD_MS: Record<Score, number> = { 1: 8000, 2: 12000, 3: 18000 };
+// "breaking" (3) item gets the most reading time. Floor raised to 10s so
+// even a calm (1) item gives the reader enough time to read it.
+const HOLD_MS: Record<Score, number> = { 1: 10000, 2: 12000, 3: 18000 };
 const EXIT_ANIM_MS = 500;
 
 const EMOJI_POOL = ["📰", "🌍", "💰", "🏛️", "📊", "🔥", "🚨", "⚡"];
@@ -66,21 +67,7 @@ export default function BreakingNewsFeed({ articles, language }: BreakingNewsFee
   const [queue, setQueue] = useState<ScoredArticle[]>([]);
   const [current, setCurrent] = useState<ScoredArticle | null>(null);
   const [exiting, setExiting] = useState(false);
-  const [bannerTop, setBannerTop] = useState(96);
   const keyRef = useRef(0);
-
-  // iOS Safari breaks position:fixed when computed against a media-query
-  // breakpoint class, so the top offset (below header+ticker on mobile,
-  // header+ticker+category nav on desktop) is tracked in JS instead.
-  useEffect(() => {
-    const update = () => {
-      const isMobile = window.innerWidth < 640;
-      setBannerTop(isMobile ? 96 : 160);
-    };
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, []);
 
   // Only surface stories in the currently selected language.
   const langArticles = useMemo(
@@ -138,102 +125,90 @@ export default function BreakingNewsFeed({ articles, language }: BreakingNewsFee
     return () => clearTimeout(exitTimer);
   }, [exiting]);
 
-  // Expose the banner's reserved height as a CSS variable so NewsBoard's
-  // main content can offset its padding-top without prop-drilling banner
-  // visibility/height down through the component tree.
-  useEffect(() => {
-    const extra = current && !exiting ? 68 : 0;
-    document.documentElement.style.setProperty(
-      "--banner-padding-top",
-      `${bannerTop + extra}px`,
-    );
-  }, [bannerTop, current, exiting]);
-
   if (!current) return null;
 
   const { article, score, emoji } = current;
   const isBreaking = score === 3;
 
   return (
-    <a
-      href={article.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group block w-full cursor-pointer overflow-hidden border-b border-gv-border hover:brightness-110"
+    <div
       style={{
-        position: "fixed",
-        top: `${bannerTop}px`,
-        left: 0,
-        right: 0,
-        zIndex: 40,
-        transform: exiting ? "translateY(-110%)" : "translateY(0)",
-        transition: "transform 0.3s ease",
-        WebkitTransform: exiting ? "translateY(-110%)" : "translateY(0)",
-        WebkitTransition: "-webkit-transform 0.3s ease",
-        willChange: "transform",
-        backgroundColor: "#0d0b10",
-        backgroundImage: isBreaking
-          ? "radial-gradient(ellipse at 50% 50%, rgba(220, 38, 38, 0.18) 0%, transparent 70%)"
-          : undefined,
-        borderLeft: "3px solid #C9A84C",
+        maxHeight: current && !exiting ? "72px" : "0px",
+        overflow: "hidden",
+        transition: "max-height 0.4s ease",
       }}
     >
-      <div className="mx-auto flex min-h-[64px] max-w-7xl items-center gap-3 px-4 py-2 sm:min-h-[48px] sm:gap-4 sm:px-6">
-        {/* Left: score badge + emoji */}
-        <div className="flex flex-shrink-0 items-center gap-2">
-          <span
-            className={`flex h-8 w-8 min-h-[32px] min-w-[32px] items-center justify-center rounded-full text-sm font-bold ${SCORE_BADGE_CLASSES[score]}`}
-          >
-            {score}
-          </span>
-          <span className="text-xl" aria-hidden>
-            {emoji}
-          </span>
-        </div>
-
-        {/* Center: category + breaking badge + headline */}
-        <div className="flex min-w-0 flex-1 items-center gap-3">
-          <span className="hidden flex-shrink-0 rounded-full bg-gv-gold/10 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-gv-gold sm:inline-block">
-            {CATEGORY_LABELS[article.category] ?? article.category}
-          </span>
-
-          {isBreaking && (
-            <span className="hidden flex-shrink-0 rounded-full bg-red-600 px-2.5 py-0.5 text-xs font-bold tracking-wide text-white sm:inline-block">
-              ⚡ BREAKING
+      <a
+        href={article.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group relative block w-full cursor-pointer hover:brightness-110"
+        style={{
+          backgroundColor: "#0d0b10",
+          backgroundImage: isBreaking
+            ? "radial-gradient(ellipse at 50% 50%, rgba(220, 38, 38, 0.18) 0%, transparent 70%)"
+            : undefined,
+          borderLeft: "3px solid #C9A84C",
+          borderBottom: "1px solid rgba(201,168,76,0.2)",
+        }}
+      >
+        <div className="mx-auto flex min-h-[64px] max-w-7xl items-center gap-3 px-4 py-2 sm:min-h-[48px] sm:gap-4 sm:px-6">
+          {/* Left: score badge + emoji */}
+          <div className="flex flex-shrink-0 items-center gap-2">
+            <span
+              className={`flex h-8 w-8 min-h-[32px] min-w-[32px] items-center justify-center rounded-full text-sm font-bold ${SCORE_BADGE_CLASSES[score]}`}
+            >
+              {score}
             </span>
-          )}
+            <span className="text-xl" aria-hidden>
+              {emoji}
+            </span>
+          </div>
 
-          <span className="line-clamp-2 whitespace-normal font-display text-[14px] font-semibold text-white transition-colors group-hover:text-gv-gold sm:text-[13px]">
-            {article.title}
-          </span>
+          {/* Center: category + breaking badge + headline */}
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <span className="hidden flex-shrink-0 rounded-full bg-gv-gold/10 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-gv-gold sm:inline-block">
+              {CATEGORY_LABELS[article.category] ?? article.category}
+            </span>
+
+            {isBreaking && (
+              <span className="hidden flex-shrink-0 rounded-full bg-red-600 px-2.5 py-0.5 text-xs font-bold tracking-wide text-white sm:inline-block">
+                ⚡ BREAKING
+              </span>
+            )}
+
+            <span className="line-clamp-2 whitespace-normal font-display text-[14px] font-semibold text-white transition-colors group-hover:text-gv-gold sm:text-[13px]">
+              {article.title}
+            </span>
+          </div>
+
+          {/* Right: source (always visible) + live + time (hidden on mobile) */}
+          <div className="flex flex-shrink-0 items-center gap-2 text-xs text-gv-muted">
+            <span className="font-medium opacity-70">{article.source}</span>
+            <span className="hidden sm:inline" aria-hidden>
+              ·
+            </span>
+            <span className="hidden items-center gap-1 font-semibold text-red-500 sm:flex">
+              <span className="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden />
+              LIVE
+            </span>
+            <span className="hidden sm:inline" aria-hidden>
+              ·
+            </span>
+            <span className="hidden sm:inline">{timeAgo(article.publishedAt)}</span>
+          </div>
         </div>
 
-        {/* Right: source (always visible) + live + time (hidden on mobile) */}
-        <div className="flex flex-shrink-0 items-center gap-2 text-xs text-gv-muted">
-          <span className="font-medium opacity-70">{article.source}</span>
-          <span className="hidden sm:inline" aria-hidden>
-            ·
-          </span>
-          <span className="hidden items-center gap-1 font-semibold text-red-500 sm:flex">
-            <span className="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden />
-            LIVE
-          </span>
-          <span className="hidden sm:inline" aria-hidden>
-            ·
-          </span>
-          <span className="hidden sm:inline">{timeAgo(article.publishedAt)}</span>
-        </div>
-      </div>
-
-      {/* Score-3 only: time-remaining bar shrinking from full width to 0 over
-          the hold duration, signalling how long the breaking item stays. */}
-      {isBreaking && (
-        <span
-          aria-hidden
-          className="animate-banner-progress absolute bottom-0 left-0 h-0.5 w-full bg-gv-gold"
-          style={{ animationDuration: `${HOLD_MS[score]}ms` }}
-        />
-      )}
-    </a>
+        {/* Score-3 only: time-remaining bar shrinking from full width to 0 over
+            the hold duration, signalling how long the breaking item stays. */}
+        {isBreaking && (
+          <span
+            aria-hidden
+            className="animate-banner-progress absolute bottom-0 left-0 h-0.5 w-full bg-gv-gold"
+            style={{ animationDuration: `${HOLD_MS[score]}ms` }}
+          />
+        )}
+      </a>
+    </div>
   );
 }

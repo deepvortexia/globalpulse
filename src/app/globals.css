@@ -127,37 +127,6 @@ body::before {
   }
 }
 
-/* ── Breaking news banner: slide down in, slide up out ───────────────────── */
-@keyframes banner-slide-down {
-  from {
-    transform: translateY(-100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-@keyframes banner-slide-up {
-  from {
-    transform: translateY(0);
-    opacity: 1;
-  }
-  to {
-    transform: translateY(-100%);
-    opacity: 0;
-  }
-}
-
-.animate-banner-slide-down {
-  animation: banner-slide-down 0.5s ease-out;
-}
-
-.animate-banner-slide-up {
-  animation: banner-slide-up 0.5s ease-in forwards;
-}
-
 /* Breaking-banner time-remaining bar: shrink full width → 0 (origin left).
    Duration is set inline per item so it matches that score's hold time. */
 @keyframes banner-progress {
@@ -175,8 +144,6 @@ body::before {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-banner-slide-down,
-  .animate-banner-slide-up,
   .animate-banner-progress {
     animation: none;
   }
