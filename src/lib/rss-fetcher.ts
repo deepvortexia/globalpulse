@@ -9,16 +9,34 @@ type ArticleCategory = Exclude<CategoryId, "all">;
 // overrides each source's static category, so a single feed can spread across
 // topics (e.g. a war story from a generic "world" source lands in conflicts).
 function inferCategory(title: string, description: string): ArticleCategory {
-  const rawText = title + " " + (description ?? "");
-  const text = rawText.toLowerCase();
-  if (/\bwar\b|military|attack|missile|troops|bomb|combat|ceasefire|weapon|army|nato|conflict|terrorism|isis|taliban|hamas|hezbollah|hostage/i.test(text)) return "conflicts";
-  if (/climate|carbon|emission|temperature|glacier|flood|wildfire|hurricane|drought|renewable|solar|wind energy|pollution|deforestation/i.test(text)) return "climate";
-  if (/\bai\b|artificial intelligence|robot|\btech\b|software|apple|google|microsoft|meta|openai|startup|cyber|hack|chip|semiconductor|quantum|space|nasa|rocket|satellite/i.test(text)) return "science";
-  if (/health|disease|virus|cancer|vaccine|hospital|doctor|medicine|mental health|obesity|drug|pandemic/i.test(text) || /\bWHO\b|\bCDC\b/.test(rawText)) return "health";
-  if (/election|president|minister|parliament|senate|congress|democrat|republican|vote|policy|law|court|supreme|government|political/i.test(text)) return "politics";
-  if (/economy|market|stock|gdp|inflation|recession|bank|trade|tariff|crypto|bitcoin|dollar|euro|interest rate|unemployment/i.test(text)) return "economy";
-  if (/football|soccer|nba|nfl|nhl|tennis|golf|olympics|world cup|championship|tournament|athlete|coach|stadium|league/i.test(text)) return "sports";
-  if (/film|movie|music|art|culture|festival|celebrity|fashion|book|award|oscar|grammy/i.test(text)) return "culture";
+  const raw = title + " " + (description ?? "");
+  const text = raw.toLowerCase();
+
+  // CONFLICTS — must come first (high priority)
+  if (/\b(war|warfare|military|attack|missile|troops|bombing|combat|ceasefire|weapon|army|nato|conflict|terrorism|isis|taliban|hamas|hezbollah|hostage|airstrike|siege|offensive|battalion|casualties|killed in action)\b/.test(text)) return "conflicts";
+
+  // CLIMATE
+  if (/\b(climate change|global warming|carbon emission|greenhouse|glacier|wildfire|hurricane|drought|renewable energy|solar power|wind energy|deforestation|biodiversity|sea level|fossil fuel|paris agreement|ipcc)\b/.test(text)) return "climate";
+
+  // SCIENCE & TECH — strict: must mention actual tech/science topics
+  if (/\b(artificial intelligence|machine learning|robotics|software|cybersecurity|semiconductor|quantum computing|space mission|nasa|rocket launch|satellite|genome|crispr|neuroscience|physics|astronomy)\b/.test(text)) return "science";
+  if (/\b(apple inc|google|microsoft|meta platforms|openai|nvidia|tesla|spacex|amazon web|startup funding|tech company|silicon valley)\b/.test(text)) return "science";
+
+  // HEALTH
+  if (/\b(pandemic|epidemic|virus|cancer treatment|vaccine|hospital|surgeon|mental health|obesity|pharmaceutical|drug approval|clinical trial|who announced|cdc reported|public health|mortality rate)\b/.test(text)) return "health";
+
+  // POLITICS — strict: avoid catching general news
+  if (/\b(election|presidential|parliament|senate|congress|democrat|republican|ballot|legislation|minister|prime minister|supreme court|white house|kremlin|sanctions|diplomatic|geopolitics)\b/.test(text)) return "politics";
+
+  // ECONOMY — strict: financial topics only
+  if (/\b(gdp|inflation|recession|central bank|federal reserve|interest rate|stock market|trade deficit|tariff|cryptocurrency|bitcoin|investment fund|private equity|venture capital|ipo|quarterly earnings|unemployment rate)\b/.test(text)) return "economy";
+
+  // SPORTS — very specific, avoid "world cup of coffee" type false positives
+  if (/\b(nba|nfl|nhl|mlb|premier league|champions league|world cup final|olympic games|grand slam|tour de france|formula 1|fifa|uefa|transfer fee|match result|scored|goalkeeper|touchdown|slam dunk)\b/.test(text)) return "sports";
+
+  // CULTURE — last resort for arts/entertainment, NOT business
+  if (/\b(film festival|box office|oscar|grammy|emmy|bafta|art exhibition|museum|theater|theatre|concert tour|album release|bestseller|literary prize|fashion week|streaming series|documentary)\b/.test(text)) return "culture";
+
   return "world";
 }
 
