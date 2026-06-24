@@ -29,7 +29,7 @@ export default function Header({
               type="button"
               onClick={onMenuClick}
               aria-label="Open categories"
-              className="-ml-1.5 flex h-11 w-11 items-center justify-center rounded-md text-xl text-gv-gold transition-colors hover:text-gv-gold-light sm:hidden"
+              className="-ml-1.5 flex h-12 w-12 items-center justify-center rounded-md text-2xl text-gv-gold transition-colors hover:text-gv-gold-light sm:hidden"
             >
               <span aria-hidden>☰</span>
             </button>
@@ -37,14 +37,14 @@ export default function Header({
           <Image
             src="/web-app-manifest-512x512.png"
             alt="GlobeVortex logo"
-            width={32}
-            height={32}
+            width={36}
+            height={36}
             priority
             className="rounded-md"
           />
           <span className="font-display text-sm font-bold tracking-tight sm:text-xl sm:tracking-[0.2em]">
             <span className="text-white">GLOBE</span>
-            <span className="text-gv-gold">VORTEX</span>
+            <span className="text-gv-gold"> VORTEX</span>
           </span>
         </div>
 
