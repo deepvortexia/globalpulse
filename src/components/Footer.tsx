@@ -1,0 +1,71 @@
+import Image from "next/image";
+import type { Language } from "@/types";
+
+interface FooterProps {
+  language: Language;
+}
+
+const footerText: Record<
+  Language,
+  { tagline: string; rights: string; soon: string; contact: string; about: string }
+> = {
+  en: {
+    tagline: "World news powered by AI",
+    rights: "© 2025 DeepVortex. All rights reserved.",
+    soon: "Coming soon",
+    contact: "Contact",
+    about: "About",
+  },
+  fr: {
+    tagline: "L'actualité mondiale propulsée par l'IA",
+    rights: "© 2025 DeepVortex. Tous droits réservés.",
+    soon: "Prochainement",
+    contact: "Contact",
+    about: "À propos",
+  },
+};
+
+export default function Footer({ language }: FooterProps) {
+  const text = footerText[language];
+
+  return (
+    <footer
+      style={{
+        borderTop: "1px solid rgba(201,168,76,0.3)",
+        backgroundColor: "#08080D",
+        paddingTop: "48px",
+        paddingBottom: "48px",
+      }}
+    >
+      <div className="mx-auto flex max-w-7xl flex-col items-center gap-6 px-4 sm:px-6">
+        {/* Logo + name + tagline */}
+        <div className="flex flex-col items-center gap-2">
+          <Image
+            src="/web-app-manifest-512x512.png"
+            alt="GlobeVortex logo"
+            width={32}
+            height={32}
+            className="rounded-md"
+          />
+          <span className="font-display text-lg font-bold tracking-wider">
+            <span className="text-white">GLOBE</span>
+            <span className="text-gv-gold"> VORTEX</span>
+          </span>
+          <p className="text-sm text-gv-muted">{text.tagline}</p>
+        </div>
+
+        {/* Links row — placeholder pages, not yet live */}
+        <div className="flex items-center gap-4 text-sm text-gv-muted">
+          <span className="cursor-not-allowed opacity-50">{text.contact}</span>
+          <span className="cursor-not-allowed opacity-50">{text.about}</span>
+          <span className="rounded-full border border-gv-gold/40 px-2.5 py-0.5 text-xs text-gv-gold">
+            {text.soon}
+          </span>
+        </div>
+
+        {/* Copyright */}
+        <p className="text-center text-xs opacity-60">{text.rights}</p>
+      </div>
+    </footer>
+  );
+}

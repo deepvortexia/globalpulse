@@ -1,11 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Article, CategoryId, Language } from "@/types";
 import { CATEGORIES } from "@/lib/categories";
 import Header from "@/components/Header";
 import NewsGrid from "@/components/NewsGrid";
 import CategoryNav from "@/components/CategoryNav";
+import Pagination from "@/components/Pagination";
+import Footer from "@/components/Footer";
 
 interface NewsBoardProps {
   articles: Article[];
@@ -17,6 +19,8 @@ const UI_TEXT: Record<Language, { latest: string; empty: string }> = {
   fr: { latest: "Le Monde · En Direct", empty: "Aucun article disponible pour le moment." },
 };
 
+const ARTICLES_PER_PAGE = 24;
+
 // Client boundary that owns the language toggle and everything that reacts to
 // it (header, heading, grid). Articles arrive pre-fetched from the Server
 // Component as props — no data fetching happens here.
@@ -24,6 +28,7 @@ export default function NewsBoard({ articles, error }: NewsBoardProps) {
   const [language, setLanguage] = useState<Language>("en");
   const [categoryId, setCategoryId] = useState<CategoryId>("all");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Strict per-language view: only ever show articles whose source language
   // matches the toggle (no cross-language fallback).
@@ -50,6 +55,22 @@ export default function NewsBoard({ articles, error }: NewsBoardProps) {
     if (categoryId === "all") return languageArticles;
     return languageArticles.filter((article) => article.category === categoryId);
   }, [languageArticles, categoryId]);
+
+  // Switching category or language invalidates the current page's slice.
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [categoryId, language]);
+
+  const paginatedArticles = visibleArticles.slice(
+    (currentPage - 1) * ARTICLES_PER_PAGE,
+    currentPage * ARTICLES_PER_PAGE,
+  );
+  const totalPages = Math.ceil(visibleArticles.length / ARTICLES_PER_PAGE);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const text = UI_TEXT[language];
 
@@ -90,9 +111,18 @@ export default function NewsBoard({ articles, error }: NewsBoardProps) {
         )}
 
         {visibleArticles.length > 0 && (
-          <NewsGrid articles={visibleArticles} language={language} />
+          <>
+            <NewsGrid articles={paginatedArticles} language={language} />
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
+          </>
         )}
       </main>
+
+      <Footer language={language} />
     </div>
   );
 }
