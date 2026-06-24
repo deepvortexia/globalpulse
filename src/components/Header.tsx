@@ -37,7 +37,9 @@ export default function Header({ language, onLanguageChange }: HeaderProps) {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-gv-gold opacity-75" />
               <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-gv-gold" />
             </span>
-            <span className="text-xs font-semibold tracking-widest text-gv-gold">LIVE</span>
+            <span className="hidden text-xs font-semibold tracking-widest text-gv-gold sm:inline">
+              LIVE
+            </span>
           </div>
 
           <div className="flex items-center rounded-full border border-gv-border p-0.5">

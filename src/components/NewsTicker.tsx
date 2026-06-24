@@ -36,7 +36,7 @@ export default function NewsTicker({ headlines }: NewsTickerProps) {
         {loop.map((headline, index) => (
           <span
             key={index}
-            className="flex items-center text-sm font-medium text-gv-gold"
+            className="flex items-center text-xs font-medium text-gv-gold sm:text-sm"
             aria-hidden={index >= headlines.length}
           >
             <span className="px-4">{headline}</span>

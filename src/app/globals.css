@@ -151,3 +151,47 @@ body::before {
     animation: none;
   }
 }
+
+/* ── Category drawer (mobile): slide in from left, slide out to left ──────── */
+@keyframes drawer-slide-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes drawer-slide-out {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+.animate-drawer-slide-in {
+  animation: drawer-slide-in 0.3s ease-out;
+}
+
+.animate-drawer-slide-out {
+  animation: drawer-slide-out 0.3s ease-in forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-drawer-slide-in,
+  .animate-drawer-slide-out {
+    animation: none;
+  }
+}
+
+/* Hide the scrollbar on the horizontal category pill row. */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

@@ -1,6 +1,26 @@
 import Parser from "rss-parser";
 import { RSS_SOURCES } from "./rss-sources";
-import type { Article, RSSSource } from "@/types";
+import { ARTICLE_CATEGORY_IDS } from "./categories";
+import type { Article, CategoryId, RSSSource } from "@/types";
+
+type ArticleCategory = Exclude<CategoryId, "all">;
+
+// Raw source categories that don't already match a CategoryId get aliased here;
+// anything still unrecognized falls back to "world".
+const CATEGORY_ALIASES: Record<string, ArticleCategory> = {
+  business: "economy",
+  technology: "science",
+  environment: "climate",
+};
+
+const VALID_CATEGORY_IDS = new Set<string>(ARTICLE_CATEGORY_IDS);
+
+function toCategoryId(raw: string): ArticleCategory {
+  const key = raw.trim().toLowerCase();
+  if (key in CATEGORY_ALIASES) return CATEGORY_ALIASES[key];
+  if (VALID_CATEGORY_IDS.has(key)) return key as ArticleCategory;
+  return "world";
+}
 
 interface FeedItem {
   title?: string;
@@ -55,7 +75,7 @@ function toArticle(item: FeedItem, source: RSSSource): Article | null {
     url: item.link,
     source: source.name,
     language: source.language,
-    category: source.category,
+    category: toCategoryId(source.category),
     country: source.country,
     publishedAt: new Date(publishedTime).toISOString(),
     imageUrl: extractImageUrl(item),

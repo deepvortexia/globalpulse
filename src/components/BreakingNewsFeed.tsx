@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Article } from "@/types";
+import { CATEGORIES } from "@/lib/categories";
 
 interface BreakingNewsFeedProps {
   articles: Article[];
@@ -45,11 +46,9 @@ const SCORE_BADGE_CLASSES: Record<Score, string> = {
   3: "bg-red-600 text-white animate-pulse",
 };
 
-const CATEGORY_LABELS: Record<string, string> = {
-  world: "World",
-  business: "Business",
-  politics: "Politics",
-};
+const CATEGORY_LABELS: Record<string, string> = Object.fromEntries(
+  CATEGORIES.map((cat) => [cat.id, cat.label]),
+);
 
 function timeAgo(publishedAt: string): string {
   const date = new Date(publishedAt);

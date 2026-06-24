@@ -78,7 +78,7 @@ function NewsCard({ article, language, featured = false }: NewsCardProps) {
           : "transform 0.4s ease, border-color 0.3s ease",
         willChange: "transform",
       }}
-      className="group flex h-full flex-col gap-3 rounded-xl border border-gv-border bg-gv-card p-5 [transform-style:preserve-3d] hover:border-gv-gold"
+      className="group flex h-full flex-col gap-3 rounded-xl border border-gv-border bg-gv-card p-3 [transform-style:preserve-3d] hover:border-gv-gold sm:p-5"
     >
       <span className="self-start rounded-full bg-gv-gold/10 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-gv-gold">
         {categoryLabel(article.category, language)}
