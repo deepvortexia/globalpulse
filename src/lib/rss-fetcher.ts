@@ -12,6 +12,9 @@ function inferCategory(title: string, description: string): ArticleCategory {
   const raw = title + " " + (description ?? "");
   const text = raw.toLowerCase();
 
+  // FIFA 2026 — highest priority: route any World Cup story to the live hub.
+  if (/\b(FIFA|World Cup|coupe du monde|worldcup|world cup 2026|groupe [A-H]|group [A-H]|knockout|quarter.final|semi.final)\b/i.test(raw)) return "fifa";
+
   // CONFLICTS — must come first (high priority)
   if (/\b(war|warfare|military|attack|missile|troops|bombing|combat|ceasefire|weapon|army|nato|conflict|terrorism|isis|taliban|hamas|hezbollah|hostage|airstrike|siege|offensive|battalion|casualties|killed in action)\b/.test(text)) return "conflicts";
 

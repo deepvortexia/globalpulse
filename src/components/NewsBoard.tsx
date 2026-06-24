@@ -7,6 +7,7 @@ import Header from "@/components/Header";
 import NewsGrid from "@/components/NewsGrid";
 import CategoryNav from "@/components/CategoryNav";
 import Pagination from "@/components/Pagination";
+import FifaSection from "@/components/FifaSection";
 import Footer from "@/components/Footer";
 
 interface NewsBoardProps {
@@ -93,31 +94,39 @@ export default function NewsBoard({ articles, error }: NewsBoardProps) {
       />
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 pb-10 pt-6 sm:px-6">
-        <div className="mb-8">
-          <h1 className="font-display text-xl font-bold tracking-tight text-white sm:text-3xl">
-            {text.latest}
-          </h1>
-          <span className="mt-3 block h-0.5 w-20 rounded-full bg-gradient-to-r from-gv-gold to-transparent" />
-        </div>
-
-        {error && (
-          <p className="rounded-lg border border-red-900/50 bg-red-950/30 p-4 text-red-300">
-            {error}
-          </p>
-        )}
-
-        {!error && visibleArticles.length === 0 && (
-          <p className="text-gv-muted">{text.empty}</p>
-        )}
-
-        {visibleArticles.length > 0 && (
+        {categoryId === "fifa" ? (
+          // FIFA hub has its own live-data pipeline and banner — it bypasses the
+          // RSS article grid entirely.
+          <FifaSection language={language} />
+        ) : (
           <>
-            <NewsGrid articles={paginatedArticles} language={language} />
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-            />
+            <div className="mb-8">
+              <h1 className="font-display text-xl font-bold tracking-tight text-white sm:text-3xl">
+                {text.latest}
+              </h1>
+              <span className="mt-3 block h-0.5 w-20 rounded-full bg-gradient-to-r from-gv-gold to-transparent" />
+            </div>
+
+            {error && (
+              <p className="rounded-lg border border-red-900/50 bg-red-950/30 p-4 text-red-300">
+                {error}
+              </p>
+            )}
+
+            {!error && visibleArticles.length === 0 && (
+              <p className="text-gv-muted">{text.empty}</p>
+            )}
+
+            {visibleArticles.length > 0 && (
+              <>
+                <NewsGrid articles={paginatedArticles} language={language} />
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                />
+              </>
+            )}
           </>
         )}
       </main>

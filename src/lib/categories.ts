@@ -22,6 +22,7 @@ export const CATEGORIES: CategoryMeta[] = [
   { id: "health", label: "Health", labelFr: "Santé", labelZh: "健康", emoji: "🏥" },
   { id: "culture", label: "Culture", labelFr: "Culture", labelZh: "文化", emoji: "🎭" },
   { id: "sports", label: "Sports", labelFr: "Sports", labelZh: "体育", emoji: "⚽" },
+  { id: "fifa", label: "FIFA 2026", labelFr: "FIFA 2026", labelZh: "世界杯 2026", emoji: "⚽" },
 ];
 
 // Real (non-virtual) article categories.

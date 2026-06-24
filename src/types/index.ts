@@ -10,7 +10,8 @@ export type CategoryId =
   | "conflicts"
   | "health"
   | "culture"
-  | "sports";
+  | "sports"
+  | "fifa";
 
 export interface RSSSource {
   name: string;
