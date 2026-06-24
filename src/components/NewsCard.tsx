@@ -4,6 +4,7 @@ import { memo, useEffect, useRef, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { enUS, fr } from "date-fns/locale";
 import type { Article, Language } from "@/types";
+import { categoryLabel } from "@/lib/categories";
 
 interface NewsCardProps {
   article: Article;
@@ -11,17 +12,7 @@ interface NewsCardProps {
   featured?: boolean;
 }
 
-const CATEGORY_LABELS: Record<string, Record<Language, string>> = {
-  world: { en: "World", fr: "Monde" },
-  business: { en: "Business", fr: "Économie" },
-  politics: { en: "Politics", fr: "Politique" },
-};
-
 const MAX_TILT = 8; // degrees
-
-function categoryLabel(category: string, language: Language): string {
-  return CATEGORY_LABELS[category]?.[language] ?? category;
-}
 
 function formatPublished(publishedAt: string, language: Language): string {
   const date = new Date(publishedAt);

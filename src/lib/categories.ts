@@ -29,6 +29,16 @@ export const ARTICLE_CATEGORY_IDS = CATEGORIES.map((c) => c.id).filter(
   (id): id is Exclude<CategoryId, "all"> => id !== "all",
 );
 
-export function categoryLabel(cat: CategoryMeta, language: "en" | "fr"): string {
-  return language === "fr" ? cat.labelFr : cat.label;
+// Accepts either a CategoryMeta (from the nav) or a bare category id (from a
+// card). Unknown ids fall back to the raw string.
+export function categoryLabel(
+  category: CategoryMeta | CategoryId,
+  language: "en" | "fr",
+): string {
+  const meta =
+    typeof category === "string"
+      ? CATEGORIES.find((c) => c.id === category)
+      : category;
+  if (!meta) return category as string;
+  return language === "fr" ? meta.labelFr : meta.label;
 }
