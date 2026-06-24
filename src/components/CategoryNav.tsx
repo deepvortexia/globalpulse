@@ -129,12 +129,13 @@ export default function CategoryNav({
 
       {/* ── MOBILE: slide-in drawer (opened from the Header hamburger) ───── */}
       {mounted && (
-        // z-[60] on the wrapper itself matters: position:fixed always creates
+        // z-[80] on the wrapper itself matters: position:fixed always creates
         // its own stacking context even with z-index:auto, so without an
         // explicit value here the whole drawer would paint *behind* any
-        // sibling with a positive z-index (e.g. the breaking news banner),
-        // regardless of the z-50/z-60 set on its children below.
-        <div className="fixed inset-0 z-[60] sm:hidden">
+        // sibling with a positive z-index (e.g. the breaking news banner).
+        // Must stay above the header's z-[60] so the drawer can fully cover
+        // it, including the banner, when open.
+        <div className="fixed inset-0 z-[80] sm:hidden">
           {/* Backdrop */}
           <div
             onClick={onMenuClose}

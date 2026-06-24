@@ -20,7 +20,7 @@ export default function Header({
   articles,
 }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-[70] border-b border-[rgba(201,168,76,0.2)] bg-gv-bg/90 backdrop-blur-md">
+    <header className="sticky top-0 z-[60] border-b border-[rgba(201,168,76,0.2)] bg-gv-bg/90 backdrop-blur-md">
       <div className="mx-auto flex h-12 max-w-7xl items-center justify-between px-4 sm:h-16 sm:px-6">
         {/* Hamburger (mobile only) + logo */}
         <div className="flex items-center gap-2 sm:gap-3">
