@@ -134,7 +134,7 @@ export default function BreakingNewsFeed({ articles, language }: BreakingNewsFee
       href={article.url}
       target="_blank"
       rel="noopener noreferrer"
-      className={`group relative block w-full cursor-pointer overflow-hidden border-b border-gv-border transition duration-200 hover:brightness-110 ${
+      className={`group fixed inset-x-0 top-[96px] z-40 block w-full cursor-pointer overflow-hidden border-b border-gv-border transition duration-200 hover:brightness-110 ${
         exiting ? "animate-banner-slide-up" : "animate-banner-slide-down"
       }`}
       style={{
