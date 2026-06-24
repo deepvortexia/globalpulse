@@ -1,24 +1,23 @@
 import Parser from "rss-parser";
 import { RSS_SOURCES } from "./rss-sources";
-import { ARTICLE_CATEGORY_IDS } from "./categories";
 import type { Article, CategoryId, RSSSource } from "@/types";
 
 type ArticleCategory = Exclude<CategoryId, "all">;
 
-// Raw source categories that don't already match a CategoryId get aliased here;
-// anything still unrecognized falls back to "world".
-const CATEGORY_ALIASES: Record<string, ArticleCategory> = {
-  business: "economy",
-  technology: "science",
-  environment: "climate",
-};
-
-const VALID_CATEGORY_IDS = new Set<string>(ARTICLE_CATEGORY_IDS);
-
-function toCategoryId(raw: string): ArticleCategory {
-  const key = raw.trim().toLowerCase();
-  if (key in CATEGORY_ALIASES) return CATEGORY_ALIASES[key];
-  if (VALID_CATEGORY_IDS.has(key)) return key as ArticleCategory;
+// Keyword-based classification run on every article's title + description. The
+// first matching topic wins; anything unmatched falls back to "world". This
+// overrides each source's static category, so a single feed can spread across
+// topics (e.g. a war story from a generic "world" source lands in conflicts).
+function inferCategory(title: string, description: string): ArticleCategory {
+  const text = (title + " " + (description ?? "")).toLowerCase();
+  if (/war|military|attack|missile|troops|bomb|combat|ceasefire|weapon|army|nato|conflict|terrorism|isis|taliban|hamas|hezbollah|hostage/i.test(text)) return "conflicts";
+  if (/climate|carbon|emission|temperature|glacier|flood|wildfire|hurricane|drought|renewable|solar|wind energy|pollution|deforestation/i.test(text)) return "climate";
+  if (/\bai\b|artificial intelligence|robot|tech|software|apple|google|microsoft|meta|openai|startup|cyber|hack|chip|semiconductor|quantum|space|nasa|rocket|satellite/i.test(text)) return "science";
+  if (/health|disease|virus|cancer|vaccine|hospital|doctor|medicine|mental health|obesity|drug|pandemic|WHO|CDC/i.test(text)) return "health";
+  if (/election|president|minister|parliament|senate|congress|democrat|republican|vote|policy|law|court|supreme|government|political/i.test(text)) return "politics";
+  if (/economy|market|stock|gdp|inflation|recession|bank|trade|tariff|crypto|bitcoin|dollar|euro|interest rate|unemployment/i.test(text)) return "economy";
+  if (/football|soccer|nba|nfl|nhl|tennis|golf|olympics|world cup|championship|tournament|athlete|coach|stadium|league/i.test(text)) return "sports";
+  if (/film|movie|music|art|culture|festival|celebrity|fashion|book|award|oscar|grammy/i.test(text)) return "culture";
   return "world";
 }
 
@@ -33,7 +32,11 @@ interface FeedItem {
   "media:content"?: { $?: { url?: string } };
 }
 
-const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+// Freshness window: prefer the last 4h, but widen to 8h if that leaves too
+// few stories to fill the board.
+const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
+const EIGHT_HOURS_MS = 8 * 60 * 60 * 1000;
+const MIN_FRESH_ARTICLES = 20;
 const FETCH_TIMEOUT_MS = 10_000;
 
 const parser: Parser<unknown, FeedItem> = new Parser({
@@ -66,16 +69,18 @@ function toArticle(item: FeedItem, source: RSSSource): Article | null {
 
   const publishedTime = new Date(rawDate).getTime();
   if (Number.isNaN(publishedTime)) return null;
-  if (Date.now() - publishedTime > TWELVE_HOURS_MS) return null;
+
+  const title = item.title.trim();
+  const description = (item.contentSnippet ?? item.content ?? "").trim();
 
   return {
     id: makeId(item.link),
-    title: item.title.trim(),
-    description: (item.contentSnippet ?? item.content ?? "").trim(),
+    title,
+    description,
     url: item.link,
     source: source.name,
     language: source.language,
-    category: toCategoryId(source.category),
+    category: inferCategory(title, description),
     country: source.country,
     publishedAt: new Date(publishedTime).toISOString(),
     imageUrl: extractImageUrl(item),
@@ -113,7 +118,15 @@ export async function fetchAllFeeds(): Promise<Article[]> {
     }
   }
 
-  return Array.from(deduped.values()).sort(
+  const sorted = Array.from(deduped.values()).sort(
     (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
   );
+
+  // Keep only fresh stories; widen 4h → 8h if that leaves too few to fill out.
+  const now = Date.now();
+  const within = (maxAgeMs: number) =>
+    sorted.filter((a) => now - new Date(a.publishedAt).getTime() <= maxAgeMs);
+
+  const fresh = within(FOUR_HOURS_MS);
+  return fresh.length >= MIN_FRESH_ARTICLES ? fresh : within(EIGHT_HOURS_MS);
 }

@@ -27,12 +27,12 @@ export default function NewsBoard({ articles, error }: NewsBoardProps) {
   const [categoryId, setCategoryId] = useState<CategoryId>("all");
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Articles carry a per-source language; show those matching the toggle,
-  // falling back to everything if the selected language has no stories yet.
-  const languageArticles = useMemo(() => {
-    const matching = articles.filter((article) => article.language === language);
-    return matching.length > 0 ? matching : articles;
-  }, [articles, language]);
+  // Strict per-language view: only ever show articles whose source language
+  // matches the toggle (no cross-language fallback).
+  const languageArticles = useMemo(
+    () => articles.filter((article) => article.language === language),
+    [articles, language],
+  );
 
   // Per-category counts within the current language pool ("all" = total),
   // shown as badges on each category pill.
@@ -69,7 +69,7 @@ export default function NewsBoard({ articles, error }: NewsBoardProps) {
       />
       <NewsTicker headlines={headlines} />
 
-      <BreakingNewsFeed articles={articles} />
+      <BreakingNewsFeed articles={languageArticles} language={language} />
 
       <CategoryNav
         activeId={categoryId}

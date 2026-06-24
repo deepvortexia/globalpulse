@@ -36,4 +36,33 @@ export const RSS_SOURCES: RSSSource[] = [
   { name: "Libération", url: "https://www.liberation.fr/arc/outboundfeeds/rss/", language: "fr", category: "world", country: "FR" },
   { name: "L'Express", url: "https://www.lexpress.fr/arc/outboundfeeds/rss/", language: "fr", category: "world", country: "FR" },
   { name: "20 Minutes", url: "https://www.20minutes.fr/feeds/rss/une.xml", language: "fr", category: "world", country: "FR" },
+
+  // ── Specialized / topical feeds ──────────────────────────────────────────
+  // The `category` here is advisory only: the rss-fetcher re-classifies every
+  // article by keyword. These broaden topic coverage (science, sports, etc.).
+  // URLs verified live; WHO/BFM TV/L'Équipe (404), ESPN (empty 202) and a
+  // duplicate Al Jazeera feed were dropped.
+
+  // Science & Tech (EN)
+  { name: "TechCrunch", url: "https://techcrunch.com/feed/", language: "en", category: "science", country: "US" },
+  { name: "The Verge", url: "https://www.theverge.com/rss/index.xml", language: "en", category: "science", country: "US" },
+  { name: "Ars Technica", url: "http://feeds.arstechnica.com/arstechnica/index", language: "en", category: "science", country: "US" },
+  { name: "MIT Tech Review", url: "https://www.technologyreview.com/feed/", language: "en", category: "science", country: "US" },
+
+  // Climate / Science (EN)
+  { name: "Guardian Climate", url: "https://www.theguardian.com/environment/climate-crisis/rss", language: "en", category: "climate", country: "UK" },
+  { name: "BBC Science", url: "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml", language: "en", category: "climate", country: "UK" },
+
+  // Sports (EN)
+  { name: "BBC Sport", url: "https://feeds.bbci.co.uk/sport/rss.xml", language: "en", category: "sports", country: "UK" },
+
+  // Culture (EN)
+  { name: "Guardian Culture", url: "https://www.theguardian.com/culture/rss", language: "en", category: "culture", country: "UK" },
+
+  // French specialized
+  { name: "Le Monde Science", url: "https://www.lemonde.fr/sciences/rss_full.xml", language: "fr", category: "science", country: "FR" },
+  { name: "Le Monde Sport", url: "https://www.lemonde.fr/sport/rss_full.xml", language: "fr", category: "sports", country: "FR" },
+  { name: "Le Monde Santé", url: "https://www.lemonde.fr/sante/rss_full.xml", language: "fr", category: "health", country: "FR" },
+  { name: "Le Monde Climat", url: "https://www.lemonde.fr/climat/rss_full.xml", language: "fr", category: "climate", country: "FR" },
+  { name: "Sciences et Avenir", url: "https://www.sciencesetavenir.fr/rss.xml", language: "fr", category: "science", country: "FR" },
 ];

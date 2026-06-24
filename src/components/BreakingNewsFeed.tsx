@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import type { Article } from "@/types";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { Article, Language } from "@/types";
 import { CATEGORIES } from "@/lib/categories";
 
 interface BreakingNewsFeedProps {
   articles: Article[];
+  language: Language;
 }
 
 type Score = 1 | 2 | 3;
@@ -61,18 +62,33 @@ function timeAgo(publishedAt: string): string {
   return `${hours}h ago`;
 }
 
-export default function BreakingNewsFeed({ articles }: BreakingNewsFeedProps) {
+export default function BreakingNewsFeed({ articles, language }: BreakingNewsFeedProps) {
   const [queue, setQueue] = useState<ScoredArticle[]>([]);
   const [current, setCurrent] = useState<ScoredArticle | null>(null);
   const [exiting, setExiting] = useState(false);
   const keyRef = useRef(0);
 
+  // Only surface stories in the currently selected language.
+  const langArticles = useMemo(
+    () => articles.filter((article) => article.language === language),
+    [articles, language],
+  );
+
+  // On a language switch, drop anything queued/showing so we don't flash a
+  // story from the previous language before the new feed takes over.
+  useEffect(() => {
+    setQueue([]);
+    setCurrent(null);
+    setExiting(false);
+    keyRef.current = 0;
+  }, [language]);
+
   // Producer: every 12s, score a random article and append it to the queue.
   useEffect(() => {
-    if (articles.length === 0) return;
+    if (langArticles.length === 0) return;
 
     const interval = setInterval(() => {
-      const article = articles[Math.floor(Math.random() * articles.length)];
+      const article = langArticles[Math.floor(Math.random() * langArticles.length)];
       keyRef.current += 1;
       setQueue((q) =>
         [...q, { key: keyRef.current, article, score: rollScore(), emoji: rollEmoji() }].slice(
@@ -82,7 +98,7 @@ export default function BreakingNewsFeed({ articles }: BreakingNewsFeedProps) {
     }, QUEUE_INTERVAL_MS);
 
     return () => clearInterval(interval);
-  }, [articles]);
+  }, [langArticles]);
 
   // Consumer: when nothing is showing, pull the next item off the queue.
   useEffect(() => {
