@@ -43,12 +43,6 @@ function rollEmoji(): string {
   return EMOJI_POOL[Math.floor(Math.random() * EMOJI_POOL.length)];
 }
 
-const SCORE_BADGE_CLASSES: Record<Score, string> = {
-  1: "bg-gv-gold text-gv-bg",
-  2: "bg-orange-500 text-white",
-  3: "bg-red-600 text-white animate-pulse",
-};
-
 const CATEGORY_LABELS: Record<string, string> = Object.fromEntries(
   CATEGORIES.map((cat) => [cat.id, cat.label]),
 );
@@ -153,16 +147,9 @@ export default function BreakingNewsFeed({ articles, language }: BreakingNewsFee
         }}
       >
         <div className="mx-auto flex min-h-[64px] max-w-7xl items-center gap-3 px-4 py-2 sm:min-h-[48px] sm:gap-4 sm:px-6">
-          {/* Left: score badge + emoji */}
+          {/* Left: emoji */}
           <div className="flex flex-shrink-0 items-center gap-2">
-            <span
-              className={`flex h-8 w-8 min-h-[32px] min-w-[32px] items-center justify-center rounded-full text-sm font-bold ${SCORE_BADGE_CLASSES[score]}`}
-            >
-              {score}
-            </span>
-            <span className="text-xl" aria-hidden>
-              {emoji}
-            </span>
+            <span className="text-xl">{emoji}</span>
           </div>
 
           {/* Center: category + breaking badge + headline */}
@@ -182,7 +169,7 @@ export default function BreakingNewsFeed({ articles, language }: BreakingNewsFee
             </span>
           </div>
 
-          {/* Right: source (always visible) + live + time (hidden on mobile) */}
+          {/* Right: source + time always visible; live indicator desktop-only */}
           <div className="flex flex-shrink-0 items-center gap-2 text-xs text-gv-muted">
             <span className="font-medium opacity-70">{article.source}</span>
             <span className="hidden sm:inline" aria-hidden>
@@ -195,7 +182,7 @@ export default function BreakingNewsFeed({ articles, language }: BreakingNewsFee
             <span className="hidden sm:inline" aria-hidden>
               ·
             </span>
-            <span className="hidden sm:inline">{timeAgo(article.publishedAt)}</span>
+            <span className="text-xs opacity-60">{timeAgo(article.publishedAt)}</span>
           </div>
         </div>
 
