@@ -66,7 +66,21 @@ export default function BreakingNewsFeed({ articles, language }: BreakingNewsFee
   const [queue, setQueue] = useState<ScoredArticle[]>([]);
   const [current, setCurrent] = useState<ScoredArticle | null>(null);
   const [exiting, setExiting] = useState(false);
+  const [bannerTop, setBannerTop] = useState(96);
   const keyRef = useRef(0);
+
+  // iOS Safari breaks position:fixed when computed against a media-query
+  // breakpoint class, so the top offset (below header+ticker on mobile,
+  // header+ticker+category nav on desktop) is tracked in JS instead.
+  useEffect(() => {
+    const update = () => {
+      const isMobile = window.innerWidth < 640;
+      setBannerTop(isMobile ? 96 : 160);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   // Only surface stories in the currently selected language.
   const langArticles = useMemo(
@@ -134,10 +148,15 @@ export default function BreakingNewsFeed({ articles, language }: BreakingNewsFee
       href={article.url}
       target="_blank"
       rel="noopener noreferrer"
-      className={`group fixed inset-x-0 top-[108px] z-40 block w-full cursor-pointer overflow-hidden border-b border-gv-border transition duration-200 hover:brightness-110 sm:top-[160px] ${
-        exiting ? "animate-banner-slide-up" : "animate-banner-slide-down"
-      }`}
+      className="group block w-full cursor-pointer overflow-hidden border-b border-gv-border hover:brightness-110"
       style={{
+        position: "fixed",
+        left: 0,
+        right: 0,
+        zIndex: 9999,
+        top: `${bannerTop}px`,
+        transform: exiting ? "translateY(-110%)" : "translateY(0)",
+        transition: "transform 0.3s ease",
         backgroundColor: "#0d0b10",
         backgroundImage: isBreaking
           ? "radial-gradient(ellipse at 50% 50%, rgba(220, 38, 38, 0.18) 0%, transparent 70%)"

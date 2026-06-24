@@ -30,8 +30,12 @@ body {
   background-attachment: fixed;
   color: #ededed;
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
-  /* Guard against any stray child width causing a horizontal scrollbar. */
-  overflow-x: hidden;
+  /* Guard against any stray child width causing a horizontal scrollbar.
+     Uses `clip` (not `hidden`) because `overflow-x: hidden` on body is a
+     known iOS Safari bug that breaks position:fixed descendants (the
+     breaking news banner), making them scroll with the page instead of
+     staying pinned to the viewport. */
+  overflow-x: clip;
 }
 
 /* Very subtle CSS-only grain for depth. */
