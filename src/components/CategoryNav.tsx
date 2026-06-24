@@ -39,6 +39,14 @@ export default function CategoryNav({
     return () => window.removeEventListener("resize", measure);
   }, [activeId, language]);
 
+  // Keep the active pill in view when it's selected via a route/state change
+  // rather than a direct click (e.g. programmatic nav), so it isn't left
+  // scrolled out of frame behind the clipped edge.
+  useEffect(() => {
+    const el = document.querySelector(`[data-category="${activeId}"]`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+  }, [activeId]);
+
   // ── Mobile drawer: keep mounted through the slide-out animation ────────
   const [mounted, setMounted] = useState(false);
   const [closing, setClosing] = useState(false);
@@ -76,8 +84,8 @@ export default function CategoryNav({
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div
-            className="no-scrollbar relative flex gap-1 overflow-x-auto py-2.5 pr-12"
-            style={{ scrollPaddingRight: "48px" }}
+            className="no-scrollbar relative flex gap-1 overflow-x-auto py-2.5 pr-20"
+            style={{ scrollPaddingRight: "80px" }}
           >
             {CATEGORIES.map((cat) => {
               const active = cat.id === activeId;
@@ -88,6 +96,7 @@ export default function CategoryNav({
                     btnRefs.current[cat.id] = el;
                   }}
                   type="button"
+                  data-category={cat.id}
                   onClick={() => onChange(cat.id)}
                   aria-pressed={active}
                   className={`relative flex flex-shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
