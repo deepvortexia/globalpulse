@@ -58,6 +58,7 @@ function timeAgo(publishedAt: string): string {
 }
 
 export default function BreakingNewsFeed({ articles, language }: BreakingNewsFeedProps) {
+  return null; // temp: disabled — causes layout shift (re-enable when fixed)
   const [queue, setQueue] = useState<ScoredArticle[]>([]);
   const [current, setCurrent] = useState<ScoredArticle | null>(null);
   const [exiting, setExiting] = useState(false);
@@ -121,7 +122,7 @@ export default function BreakingNewsFeed({ articles, language }: BreakingNewsFee
 
   if (!current) return null;
 
-  const { article, score, emoji } = current;
+  const { article, score, emoji } = current!;
   const isBreaking = score === 3;
 
   return (
