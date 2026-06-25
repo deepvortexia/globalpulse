@@ -9,6 +9,8 @@ interface HeaderProps {
   onLanguageChange: (language: Language) => void;
   onMenuClick?: () => void;
   articles: Article[];
+  onFifaClick: () => void;
+  fifaActive: boolean;
 }
 
 const LANGUAGES: Language[] = ["fr", "en"];
@@ -18,6 +20,8 @@ export default function Header({
   onLanguageChange,
   onMenuClick,
   articles,
+  onFifaClick,
+  fifaActive,
 }: HeaderProps) {
   return (
     <header className="sticky top-0 z-[60] border-b border-[rgba(201,168,76,0.2)] bg-gv-bg/90 backdrop-blur-md">
@@ -47,6 +51,25 @@ export default function Header({
             <span className="text-gv-gold"> VORTEX</span>
           </span>
         </div>
+
+        {/* FIFA 2026 quick-access button — always visible */}
+        <button
+          type="button"
+          onClick={onFifaClick}
+          aria-pressed={fifaActive}
+          className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-bold transition-colors ${
+            fifaActive
+              ? "border-gv-gold bg-gv-gold text-gv-bg"
+              : "border-[rgba(201,168,76,0.6)] bg-[rgba(201,168,76,0.15)] text-gv-gold hover:bg-[rgba(201,168,76,0.25)]"
+          }`}
+        >
+          <span className="relative flex h-2 w-2 flex-shrink-0">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+          </span>
+          <span aria-hidden>⚽</span>
+          <span>FIFA</span>
+        </button>
 
         {/* Live indicator + language toggle */}
         <div className="flex items-center gap-3 sm:gap-5">

@@ -82,6 +82,8 @@ export default function NewsBoard({ articles, error }: NewsBoardProps) {
         onLanguageChange={setLanguage}
         onMenuClick={() => setMenuOpen(true)}
         articles={articles}
+        onFifaClick={() => setCategoryId("fifa")}
+        fifaActive={categoryId === "fifa"}
       />
 
       <CategoryNav

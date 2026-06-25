@@ -87,7 +87,7 @@ export default function CategoryNav({
             className="no-scrollbar relative flex gap-1 overflow-x-auto py-2.5 pr-32"
             style={{ scrollPaddingRight: "128px" }}
           >
-            {CATEGORIES.map((cat) => {
+            {CATEGORIES.filter((cat) => cat.id !== "fifa").map((cat) => {
               const active = cat.id === activeId;
               return (
                 <button
@@ -167,7 +167,7 @@ export default function CategoryNav({
             </div>
 
             <nav aria-label="Categories" className="flex-1 overflow-y-auto py-2">
-              {CATEGORIES.map((cat) => {
+              {CATEGORIES.filter((cat) => cat.id !== "fifa").map((cat) => {
                 const active = cat.id === activeId;
                 return (
                   <button
