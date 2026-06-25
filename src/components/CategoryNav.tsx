@@ -44,7 +44,7 @@ export default function CategoryNav({
   // scrolled out of frame behind the clipped edge.
   useEffect(() => {
     const el = document.querySelector(`[data-category="${activeId}"]`);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
   }, [activeId]);
 
   // ── Mobile drawer: keep mounted through the slide-out animation ────────
@@ -84,8 +84,8 @@ export default function CategoryNav({
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div
-            className="no-scrollbar relative flex gap-1 overflow-x-auto py-2.5 pr-20"
-            style={{ scrollPaddingRight: "80px" }}
+            className="no-scrollbar relative flex gap-1 overflow-x-auto py-2.5 pr-32"
+            style={{ scrollPaddingRight: "128px" }}
           >
             {CATEGORIES.map((cat) => {
               const active = cat.id === activeId;
@@ -101,8 +101,10 @@ export default function CategoryNav({
                   aria-pressed={active}
                   className={`relative flex flex-shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
                     active
-                      ? "border-gv-gold text-gv-gold"
-                      : "border-transparent text-gv-muted hover:text-white"
+                      ? "border-gv-gold text-gv-gold shadow-[0_0_12px_rgba(201,168,76,0.5)]"
+                      : cat.id === "fifa"
+                        ? "border-gv-gold/40 text-gv-muted shadow-[0_0_8px_rgba(201,168,76,0.25)] hover:border-gv-gold hover:text-white"
+                        : "border-transparent text-gv-muted hover:text-white"
                   }`}
                 >
                   <span aria-hidden>{cat.emoji}</span>
