@@ -27,6 +27,9 @@ const T = {
     loading: "Loading live scores…",
     error: "Couldn’t load FIFA data. Retrying…",
     group: "Group",
+    ht: "HT",
+    firstHalf: "1st Half",
+    secondHalf: "2nd Half",
     cols: { mp: "MP", w: "W", d: "D", l: "L", gf: "GF", ga: "GA", gd: "GD", pts: "Pts" },
   },
   fr: {
@@ -40,6 +43,9 @@ const T = {
     loading: "Chargement des scores…",
     error: "Impossible de charger les données FIFA. Nouvel essai…",
     group: "Groupe",
+    ht: "MT",
+    firstHalf: "1re mi-temps",
+    secondHalf: "2e mi-temps",
     cols: { mp: "J", w: "G", d: "N", l: "P", gf: "BP", ga: "BC", gd: "Diff", pts: "Pts" },
   },
 } as const;
@@ -55,14 +61,21 @@ function formatKickoff(match: FifaMatch, language: Language): string {
   }).format(new Date(match.kickoffMs));
 }
 
-function LiveBadge({ minute, label }: { minute: string | null; label: string }) {
+function LiveBadge({ label, detail }: { label: string; detail?: string | null }) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full bg-red-600 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-white">
       <span className="h-2 w-2 animate-pulse rounded-full bg-white" aria-hidden />
       {label}
-      {minute ? <span className="tabular-nums opacity-90">{minute}</span> : null}
+      {detail ? <span className="tabular-nums opacity-90">{detail}</span> : null}
     </span>
   );
+}
+
+// "1st Half" / "2nd Half" for the live period; null for extra time or unknown.
+function halfLabel(period: number | null, t: (typeof T)[Language]): string | null {
+  if (period === 1) return t.firstHalf;
+  if (period === 2) return t.secondHalf;
+  return null;
 }
 
 function TeamRow({ flag, name, score }: { flag: string; name: string; score: number | null }) {
@@ -81,13 +94,18 @@ function TeamRow({ flag, name, score }: { flag: string; name: string; score: num
   );
 }
 
-function LiveCard({ match, liveLabel }: { match: FifaMatch; liveLabel: string }) {
+function LiveCard({ match, t }: { match: FifaMatch; t: (typeof T)[Language] }) {
+  // At the interval show "HT"; otherwise the live clock (e.g. "45'+2'").
+  const detail = match.isHalftime ? t.ht : match.minute;
+  // The current half is only meaningful while play is ongoing, not at HT.
+  const half = match.isHalftime ? null : halfLabel(match.period, t);
   return (
     <div className="rounded-xl border border-red-700/40 bg-gv-card p-4 shadow-lg shadow-red-900/10">
       <div className="mb-3 flex items-center justify-between">
-        <LiveBadge minute={match.minute} label={liveLabel} />
+        <LiveBadge label={t.live} detail={detail} />
         <span className="text-xs text-gv-muted">
-          {match.group ? `Group ${match.group}` : match.type}
+          {match.group ? `${t.group} ${match.group}` : match.type}
+          {half ? ` · ${half}` : ""}
         </span>
       </div>
       <div className="space-y-2.5">
@@ -272,7 +290,7 @@ export default function FifaSection({ language }: FifaSectionProps) {
           </h1>
           <p className="mt-1 text-sm text-gv-muted">{t.subtitle}</p>
         </div>
-        {live.length > 0 && <LiveBadge minute={null} label={t.live} />}
+        {live.length > 0 && <LiveBadge label={t.live} />}
       </div>
 
       {status === "loading" && <p className="text-gv-muted">{t.loading}</p>}
@@ -290,7 +308,7 @@ export default function FifaSection({ language }: FifaSectionProps) {
             {live.length > 0 ? (
               <div className="grid gap-3 sm:grid-cols-2">
                 {live.map((m) => (
-                  <LiveCard key={m.id} match={m} liveLabel={t.live} />
+                  <LiveCard key={m.id} match={m} t={t} />
                 ))}
               </div>
             ) : (

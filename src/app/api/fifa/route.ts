@@ -2,8 +2,9 @@ import { fetchTeams, fetchMatches, fetchGroups } from "@/lib/fifa-api";
 import type { FifaData } from "@/lib/fifa-api";
 import type { ApiResponse } from "@/types";
 
-// Cached for 30s at the route level; the upstream fetches in fifa-api carry the
-// same revalidate, so worldcup26.ir is hit at most once every 30 seconds.
+// Cached for 30s at the route level. Live scores come from ESPN and standings
+// from worldcup26.ir (see fifa-api); their own revalidate windows cap how often
+// each upstream is hit, and this route caps how often any of them is hit at all.
 export const revalidate = 30;
 
 export async function GET() {
