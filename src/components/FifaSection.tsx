@@ -199,7 +199,7 @@ function GroupTable({ group, t }: { group: FifaGroup; t: (typeof T)[Language] })
                   <span className="text-base" aria-hidden>
                     {s.flag}
                   </span>
-                  <span className="truncate font-medium text-white">{s.name}</span>
+                  <span className="max-w-[80px] truncate font-medium text-white sm:max-w-none" title={s.name}>{s.name}</span>
                 </span>
               </td>
               <td className="px-1.5 py-2 text-center tabular-nums text-gv-muted">{s.mp}</td>
