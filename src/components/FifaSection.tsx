@@ -9,9 +9,9 @@ interface FifaSectionProps {
   language: Language;
 }
 
-// Client-side polling interval. The /api/fifa route is itself cached for 60s,
-// so polling at 60s keeps the board live without hammering the upstream API.
-const POLL_MS = 60_000;
+// Client-side polling interval. The /api/fifa route is itself cached for 30s,
+// so polling at 30s keeps the board live without hammering the upstream API.
+const POLL_MS = 30_000;
 const MAX_UPCOMING = 12;
 const MAX_RESULTS = 12;
 

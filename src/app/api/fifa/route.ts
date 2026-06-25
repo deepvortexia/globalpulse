@@ -2,9 +2,9 @@ import { fetchTeams, fetchMatches, fetchGroups } from "@/lib/fifa-api";
 import type { FifaData } from "@/lib/fifa-api";
 import type { ApiResponse } from "@/types";
 
-// Cached for 60s at the route level; the upstream fetches in fifa-api carry the
-// same revalidate, so worldcup26.ir is hit at most once a minute.
-export const revalidate = 60;
+// Cached for 30s at the route level; the upstream fetches in fifa-api carry the
+// same revalidate, so worldcup26.ir is hit at most once every 30 seconds.
+export const revalidate = 30;
 
 export async function GET() {
   try {
@@ -20,7 +20,7 @@ export async function GET() {
       { success: true, data: { matches, groups, teams } } satisfies ApiResponse<FifaData>,
       {
         headers: {
-          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
         },
       },
     );
