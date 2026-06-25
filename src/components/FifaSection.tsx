@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Language } from "@/types";
 import type { ApiResponse } from "@/types";
-import type { FifaData, FifaMatch, FifaGroup } from "@/lib/fifa-api";
+import type { FifaData, FifaMatch, FifaGroup, FifaScorer } from "@/lib/fifa-api";
 
 interface FifaSectionProps {
   language: Language;
@@ -31,6 +31,7 @@ const T = {
     firstHalf: "1st Half",
     secondHalf: "2nd Half",
     cols: { mp: "MP", w: "W", d: "D", l: "L", gf: "GF", ga: "GA", gd: "GD", pts: "Pts" },
+    scorers: { title: "Top Scorers", goals: "Goals", assists: "Assists", team: "Team" },
   },
   fr: {
     title: "Coupe du Monde FIFA 2026",
@@ -47,6 +48,7 @@ const T = {
     firstHalf: "1re mi-temps",
     secondHalf: "2e mi-temps",
     cols: { mp: "J", w: "G", d: "N", l: "P", gf: "BP", ga: "BC", gd: "Diff", pts: "Pts" },
+    scorers: { title: "Meilleurs Buteurs", goals: "Buts", assists: "Passes D.", team: "Équipe" },
   },
 } as const;
 
@@ -218,6 +220,63 @@ function GroupTable({ group, t }: { group: FifaGroup; t: (typeof T)[Language] })
   );
 }
 
+function TopScorers({
+  scorers,
+  t,
+}: {
+  scorers: FifaScorer[];
+  t: (typeof T)[Language];
+}) {
+  const labels = t.scorers;
+  return (
+    <div className="overflow-hidden rounded-xl border border-gv-border bg-gv-card/60">
+      <div className="border-b border-gv-border bg-gv-gold/10 px-3 py-2 text-sm font-bold text-gv-gold">
+        {labels.title}
+      </div>
+      <table className="w-full text-left text-sm">
+        <thead>
+          <tr className="text-[11px] uppercase tracking-wide text-gv-muted">
+            <th className="px-3 py-2 font-medium">#</th>
+            <th className="px-1 py-2 font-medium">Player</th>
+            <th className="hidden px-2 py-2 font-medium sm:table-cell">{labels.team}</th>
+            <th className="px-2 py-2 text-center font-bold text-gv-gold">{labels.goals}</th>
+            <th className="px-3 py-2 text-center font-medium">{labels.assists}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {scorers.map((s) => {
+            const isTop3 = s.rank <= 3;
+            return (
+              <tr key={s.athleteId} className="border-t border-gv-border/60">
+                <td className="px-3 py-2 tabular-nums">
+                  <span className={isTop3 ? "font-bold text-gv-gold" : "text-gv-muted"}>
+                    {s.rank}
+                  </span>
+                </td>
+                <td className="px-1 py-2">
+                  <span className="flex items-center gap-2">
+                    <span className="text-base" aria-hidden>
+                      {s.teamFlag}
+                    </span>
+                    <span className="truncate font-medium text-white">{s.name}</span>
+                  </span>
+                </td>
+                <td className="hidden px-2 py-2 text-gv-muted sm:table-cell">{s.team}</td>
+                <td className="px-2 py-2 text-center">
+                  <span className="font-bold tabular-nums text-gv-gold">{s.goals}</span>
+                </td>
+                <td className="px-3 py-2 text-center tabular-nums text-gv-muted">
+                  {s.assists > 0 ? s.assists : "–"}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
     <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold text-white">
@@ -349,6 +408,14 @@ export default function FifaSection({ language }: FifaSectionProps) {
                   <GroupTable key={g.name} group={g} t={t} />
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Top Scorers */}
+          {data.scorers.length > 0 && (
+            <div>
+              <SectionHeading>{t.scorers.title}</SectionHeading>
+              <TopScorers scorers={data.scorers} t={t} />
             </div>
           )}
         </div>

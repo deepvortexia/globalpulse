@@ -17,6 +17,8 @@
 const WC_BASE = "https://worldcup26.ir";
 const ESPN_SCOREBOARD =
   "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard";
+const ESPN_STATISTICS =
+  "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/statistics?limit=20";
 const REVALIDATE_SECONDS = 60;
 const LIVE_REVALIDATE_SECONDS = 15;
 
@@ -71,10 +73,21 @@ export interface FifaGroup {
   standings: FifaStanding[];
 }
 
+export interface FifaScorer {
+  rank: number;
+  athleteId: string;
+  name: string;
+  team: string;
+  teamFlag: string;
+  goals: number;
+  assists: number;
+}
+
 export interface FifaData {
   matches: FifaMatch[];
   groups: FifaGroup[];
   teams: FifaTeam[];
+  scorers: FifaScorer[];
 }
 
 // ── Raw worldcup26 shapes (every field arrives as a string) ────────────────
@@ -101,6 +114,27 @@ interface RawStanding {
 interface RawGroup {
   name: string;
   teams?: RawStanding[];
+}
+
+// ── Raw ESPN statistics shapes ─────────────────────────────────────────────
+interface EspnStatAthlete {
+  id?: string;
+  displayName?: string;
+  team?: {
+    displayName?: string;
+    abbreviation?: string;
+  };
+}
+interface EspnStatLeader {
+  value?: number;
+  athlete?: EspnStatAthlete;
+}
+interface EspnStatCategory {
+  name?: string; // "goalsLeaders" | "assistsLeaders"
+  leaders?: EspnStatLeader[];
+}
+interface EspnStatistics {
+  stats?: EspnStatCategory[];
 }
 
 // ── Raw ESPN scoreboard shapes ─────────────────────────────────────────────
@@ -282,6 +316,68 @@ export async function fetchMatches(teams?: FifaTeam[]): Promise<FifaMatch[]> {
       kickoffMs: toMs(ev.date),
     };
   });
+}
+
+// Top scorers from the ESPN /statistics endpoint. Goals leaders are the primary
+// list; assists are joined in by athlete id so each row is complete.
+// Teams are matched by FIFA abbreviation code against the worldcup26 team list
+// to recover the emoji flag.
+export async function fetchScorers(teams?: FifaTeam[]): Promise<FifaScorer[]> {
+  const [data, teamList] = await Promise.all([
+    getJson<EspnStatistics>(ESPN_STATISTICS, REVALIDATE_SECONDS),
+    teams ? Promise.resolve(teams) : fetchTeams(),
+  ]);
+
+  // Index worldcup26 teams by FIFA abbreviation code for flag lookup.
+  const byCode = new Map<string, FifaTeam>();
+  for (const t of teamList) {
+    if (t.fifaCode) byCode.set(t.fifaCode.toUpperCase(), t);
+  }
+  // Also index by normalized name as a fallback.
+  const byName = new Map<string, FifaTeam>();
+  for (const t of teamList) {
+    if (t.name) byName.set(normName(t.name), t);
+  }
+  const flagFor = (abbr?: string, teamName?: string): string => {
+    if (abbr) {
+      const t = byCode.get(abbr.toUpperCase());
+      if (t) return t.flag;
+    }
+    if (teamName) {
+      const t = byName.get(normName(teamName));
+      if (t) return t.flag;
+    }
+    return "🏳️";
+  };
+
+  const cats = data.stats ?? [];
+  const goalscat = cats.find((c) => c.name === "goalsLeaders");
+  const assistsCat = cats.find((c) => c.name === "assistsLeaders");
+
+  // Build athlete-id → assists count from the assists category.
+  const assistsById = new Map<string, number>();
+  for (const ldr of assistsCat?.leaders ?? []) {
+    const id = ldr.athlete?.id;
+    if (id && ldr.value != null) assistsById.set(id, ldr.value);
+  }
+
+  return (goalscat?.leaders ?? [])
+    .slice(0, 10)
+    .map((ldr, i) => {
+      const ath = ldr.athlete ?? {};
+      const id = ath.id ?? String(i);
+      const abbr = ath.team?.abbreviation;
+      const teamName = ath.team?.displayName;
+      return {
+        rank: i + 1,
+        athleteId: id,
+        name: ath.displayName ?? "Unknown",
+        team: teamName ?? abbr ?? "",
+        teamFlag: flagFor(abbr, teamName),
+        goals: ldr.value ?? 0,
+        assists: assistsById.get(id) ?? 0,
+      };
+    });
 }
 
 export async function fetchGroups(teams?: FifaTeam[]): Promise<FifaGroup[]> {

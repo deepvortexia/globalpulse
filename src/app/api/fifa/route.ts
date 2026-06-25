@@ -1,4 +1,4 @@
-import { fetchTeams, fetchMatches, fetchGroups } from "@/lib/fifa-api";
+import { fetchTeams, fetchMatches, fetchGroups, fetchScorers } from "@/lib/fifa-api";
 import type { FifaData } from "@/lib/fifa-api";
 import type { ApiResponse } from "@/types";
 
@@ -12,13 +12,14 @@ export async function GET() {
     // Fetch teams once and feed the map into both builders to avoid refetching
     // (Route Handlers don't get fetch memoization).
     const teams = await fetchTeams();
-    const [matches, groups] = await Promise.all([
+    const [matches, groups, scorers] = await Promise.all([
       fetchMatches(teams),
       fetchGroups(teams),
+      fetchScorers(teams),
     ]);
 
     return Response.json(
-      { success: true, data: { matches, groups, teams } } satisfies ApiResponse<FifaData>,
+      { success: true, data: { matches, groups, teams, scorers } } satisfies ApiResponse<FifaData>,
       {
         headers: {
           "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
