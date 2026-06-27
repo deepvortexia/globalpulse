@@ -20,6 +20,7 @@ const playfairDisplay = Playfair_Display({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://globevortex.com"),
   title: "GlobeVortex — Live World News",
   description: "Premium live world news from trusted sources, in English and French.",
   icons: {

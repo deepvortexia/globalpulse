@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import type { Language } from "@/types";
 
 interface FooterProps {
@@ -59,7 +60,9 @@ export default function Footer({ language }: FooterProps) {
         {/* Links row — placeholder pages, not yet live */}
         <div className="flex items-center gap-4 text-sm text-gv-muted">
           <span className="cursor-not-allowed opacity-50">{text.contact}</span>
-          <span className="cursor-not-allowed opacity-50">{text.about}</span>
+          <Link href="/about" className="transition-colors hover:text-gv-gold">
+            {text.about}
+          </Link>
           <span className="rounded-full border border-gv-gold/40 px-2.5 py-0.5 text-xs text-gv-gold">
             {text.soon}
           </span>
