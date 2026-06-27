@@ -8,7 +8,7 @@ type ArticleCategory = Exclude<CategoryId, "all">;
 // first matching topic wins; anything unmatched falls back to "world". This
 // overrides each source's static category, so a single feed can spread across
 // topics (e.g. a war story from a generic "world" source lands in conflicts).
-function inferCategory(title: string, description: string): ArticleCategory {
+export function inferCategory(title: string, description: string): ArticleCategory {
   const raw = title + " " + (description ?? "");
   const text = raw.toLowerCase();
 
@@ -121,6 +121,35 @@ async function fetchSource(source: RSSSource): Promise<Article[]> {
   }
 
   return articles;
+}
+
+// Batched variant for the background cron: fetches every source in batches to
+// bound memory/socket usage, dedupes by URL, and returns ALL parsed articles
+// sorted newest-first WITHOUT the 4-8h freshness trim (the DB applies its own
+// 7-day retention). Per-source failures are logged and skipped.
+export async function fetchAllFeedsRaw(batchSize = 10): Promise<Article[]> {
+  const collected: Article[] = [];
+
+  for (let i = 0; i < RSS_SOURCES.length; i += batchSize) {
+    const batch = RSS_SOURCES.slice(i, i + batchSize);
+    const results = await Promise.allSettled(batch.map(fetchSource));
+    results.forEach((result, j) => {
+      if (result.status === "fulfilled") {
+        collected.push(...result.value);
+      } else {
+        console.error(`[rss-fetcher] Failed to fetch "${batch[j].name}":`, result.reason);
+      }
+    });
+  }
+
+  const deduped = new Map<string, Article>();
+  for (const article of collected) {
+    if (!deduped.has(article.url)) deduped.set(article.url, article);
+  }
+
+  return Array.from(deduped.values()).sort(
+    (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+  );
 }
 
 export async function fetchAllFeeds(): Promise<Article[]> {

@@ -89,4 +89,52 @@ export const RSS_SOURCES: RSSSource[] = [
   { name: "franceinfo Monde", url: "https://www.francetvinfo.fr/monde.rss", language: "fr", category: "world", country: "FR" },
   { name: "RFI Sport", url: "https://www.rfi.fr/fr/sports/rss", language: "fr", category: "sports", country: "FR" },
   { name: "Le Figaro International", url: "https://www.lefigaro.fr/rss/figaro_international.xml", language: "fr", category: "world", country: "FR" },
+
+  // ── Cron expansion batch (all fetch-verified 200 + valid XML on 2026-06-27) ──
+  // Dropped as non-working: ESPN (202 no body), The Athletic / Pitchfork /
+  // MedicalNewsToday / Yale e360 (404), NIH newsinhealth (403). Ars Technica,
+  // Al Jazeera and Foreign Policy already present above, so their alt feeds
+  // were skipped to avoid duplicate sources.
+
+  // Sports (EN)
+  { name: "CBS Sports", url: "https://www.cbssports.com/rss/headlines/", language: "en", category: "sports", country: "US" },
+  { name: "Yahoo Sports", url: "https://sports.yahoo.com/rss/", language: "en", category: "sports", country: "US" },
+
+  // Culture / Entertainment (EN)
+  { name: "BBC Entertainment & Arts", url: "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml", language: "en", category: "culture", country: "UK" },
+  { name: "NPR Culture", url: "https://feeds.npr.org/1008/rss.xml", language: "en", category: "culture", country: "US" },
+  { name: "Variety", url: "https://variety.com/feed/", language: "en", category: "culture", country: "US" },
+  { name: "The Hollywood Reporter", url: "https://www.hollywoodreporter.com/feed/", language: "en", category: "culture", country: "US" },
+  { name: "Rolling Stone", url: "https://www.rollingstone.com/music/music-news/feed/", language: "en", category: "culture", country: "US" },
+
+  // Health (EN)
+  { name: "WHO News", url: "https://www.who.int/rss-feeds/news-english.xml", language: "en", category: "health", country: "CH" },
+  { name: "NPR Health", url: "https://feeds.npr.org/1128/rss.xml", language: "en", category: "health", country: "US" },
+  { name: "STAT News", url: "https://www.statnews.com/feed/", language: "en", category: "health", country: "US" },
+
+  // Science & Tech (EN)
+  { name: "Wired", url: "https://www.wired.com/feed/rss", language: "en", category: "science", country: "US" },
+  { name: "Phys.org", url: "https://phys.org/rss-feed/", language: "en", category: "science", country: "US" },
+  { name: "New Scientist", url: "https://www.newscientist.com/feed/home/", language: "en", category: "science", country: "UK" },
+  { name: "NPR Science", url: "https://feeds.npr.org/1019/rss.xml", language: "en", category: "science", country: "US" },
+
+  // Economy (EN)
+  { name: "NPR Business", url: "https://feeds.npr.org/1006/rss.xml", language: "en", category: "economy", country: "US" },
+  { name: "MarketWatch", url: "https://www.marketwatch.com/rss/topstories", language: "en", category: "economy", country: "US" },
+  { name: "Forbes Business", url: "https://www.forbes.com/business/feed/", language: "en", category: "economy", country: "US" },
+  { name: "MarketWatch Realtime", url: "https://feeds.content.dowjones.io/public/rss/mw_realtimeheadlines", language: "en", category: "economy", country: "US" },
+
+  // Climate (EN)
+  { name: "Inside Climate News", url: "https://insideclimatenews.org/feed/", language: "en", category: "climate", country: "US" },
+  { name: "Grist", url: "https://grist.org/feed/", language: "en", category: "climate", country: "US" },
+  { name: "Carbon Brief", url: "https://www.carbonbrief.org/feed/", language: "en", category: "climate", country: "UK" },
+
+  // Conflicts (EN)
+  { name: "The Intercept", url: "https://theintercept.com/feed/?rss", language: "en", category: "conflicts", country: "US" },
+
+  // World — Google News search feeds (high volume, no auth required)
+  { name: "Google News — World", url: "https://news.google.com/rss/search?q=world+news&hl=en&gl=US&ceid=US:en", language: "en", category: "world", country: "US" },
+  { name: "Google News — International", url: "https://news.google.com/rss/search?q=international+news&hl=en&gl=US&ceid=US:en", language: "en", category: "world", country: "US" },
+  { name: "Google News — Breaking (FR)", url: "https://news.google.com/rss/search?q=breaking+news&hl=fr&gl=CA&ceid=CA:fr", language: "fr", category: "world", country: "CA" },
+  { name: "Google News — Actualités Monde (FR)", url: "https://news.google.com/rss/search?q=actualités+monde&hl=fr&gl=CA&ceid=CA:fr", language: "fr", category: "world", country: "CA" },
 ];
