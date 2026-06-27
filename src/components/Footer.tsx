@@ -43,11 +43,11 @@ export default function Footer({ language }: FooterProps) {
         {/* Logo + name + tagline */}
         <div className="flex flex-col items-center gap-2">
           <Image
-            src="/web-app-manifest-512x512.png"
+            src="/logo.png"
             alt="GlobeVortex logo"
-            width={32}
-            height={32}
-            className="rounded-md"
+            width={64}
+            height={64}
+            style={{ filter: 'drop-shadow(0 0 8px rgba(201,168,76,0.8))' }}
           />
           <span className="font-display text-lg font-bold tracking-wider">
             <span className="text-white">GLOBE</span>

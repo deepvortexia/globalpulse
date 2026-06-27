@@ -39,12 +39,12 @@ export default function Header({
             </button>
           )}
           <Image
-            src="/web-app-manifest-512x512.png"
+            src="/logo.png"
             alt="GlobeVortex logo"
             width={36}
             height={36}
             priority
-            className="rounded-md"
+            style={{ filter: 'drop-shadow(0 0 8px rgba(201,168,76,0.8))' }}
           />
           <span className="font-display text-sm font-bold tracking-tight sm:text-xl sm:tracking-[0.2em]">
             <span className="text-white">GLOBE</span>
