@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { CategoryId, Language } from "@/types";
 import { CATEGORIES, categoryLabel } from "@/lib/categories";
 
@@ -25,20 +25,6 @@ export default function CategoryNav({
   menuOpen,
   onMenuClose,
 }: CategoryNavProps) {
-  // ── Tablet/desktop: measured sliding underline ─────────────────────────
-  const btnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const [underline, setUnderline] = useState({ left: 0, width: 0 });
-
-  useEffect(() => {
-    function measure() {
-      const btn = btnRefs.current[activeId];
-      if (btn) setUnderline({ left: btn.offsetLeft, width: btn.offsetWidth });
-    }
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, [activeId, language]);
-
   // Keep the active pill in view when it's selected via a route/state change
   // rather than a direct click (e.g. programmatic nav), so it isn't left
   // scrolled out of frame behind the clipped edge.
@@ -92,26 +78,20 @@ export default function CategoryNav({
               return (
                 <button
                   key={cat.id}
-                  ref={(el) => {
-                    btnRefs.current[cat.id] = el;
-                  }}
                   type="button"
                   data-category={cat.id}
                   onClick={() => onChange(cat.id)}
                   aria-pressed={active}
-                  className={`relative flex flex-shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
+                  className={`flex flex-shrink-0 items-center gap-1.5 rounded-full border border-transparent px-3.5 py-1.5 text-xs transition-all ${
                     active
-                      ? "border-gv-gold text-gv-gold shadow-[0_0_12px_rgba(201,168,76,0.5)]"
-                      : cat.id === "fifa"
-                        ? "border-gv-gold/40 text-gv-muted shadow-[0_0_8px_rgba(201,168,76,0.25)] hover:border-gv-gold hover:text-white"
-                        : "border-transparent text-gv-muted hover:text-white"
+                      ? "bg-gradient-to-r from-[#C9A84C] to-[#E8C96D] font-bold text-black shadow-[0_0_12px_rgba(201,168,76,0.3)]"
+                      : "font-medium text-gv-muted hover:text-gv-gold"
                   }`}
                 >
-                  <span aria-hidden>{cat.emoji}</span>
                   <span>{categoryLabel(cat, language)}</span>
                   <span
                     className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${
-                      active ? "bg-gv-gold/20 text-gv-gold" : "bg-white/5 text-gv-muted"
+                      active ? "bg-black/20 text-black" : "bg-white/5 text-gv-muted"
                     }`}
                   >
                     {counts[cat.id] ?? 0}
@@ -119,21 +99,20 @@ export default function CategoryNav({
                 </button>
               );
             })}
-            {/* Sliding active-underline; left/width animate via CSS transition. */}
-            <span
-              aria-hidden
-              className="pointer-events-none absolute bottom-0 h-0.5 rounded-full bg-gv-gold transition-all duration-300 ease-out"
-              style={{ left: underline.left, width: underline.width }}
-            />
           </div>
 
-          {/* Right-edge fade: signals there are more pills (e.g. Sports) to
-              scroll to. Sits outside the scroll container so it stays pinned,
-              and is pointer-events-none so a partially-faded pill stays
-              clickable. */}
+          {/* Right-edge gold fade: signals there are more pills (e.g. Sports)
+              to scroll to. Fades content into the background with a gold tint
+              to match the nav aesthetic. Sits outside the scroll container so
+              it stays pinned, and is pointer-events-none so a partially-faded
+              pill stays clickable. */}
           <span
             aria-hidden
-            className="pointer-events-none absolute inset-y-0 right-4 w-16 bg-gradient-to-l from-gv-bg to-transparent sm:right-6"
+            className="pointer-events-none absolute inset-y-0 right-4 w-20 sm:right-6"
+            style={{
+              background:
+                "linear-gradient(to left, #0a0a0f 0%, rgba(10,10,15,0.85) 45%, rgba(201,168,76,0.12) 75%, transparent 100%)",
+            }}
           />
         </div>
       </nav>
@@ -187,15 +166,12 @@ export default function CategoryNav({
                       onMenuClose();
                     }}
                     aria-pressed={active}
-                    className={`flex min-h-[44px] w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium transition-colors ${
+                    className={`flex min-h-[44px] w-full items-center gap-3 border-l-2 px-4 py-3 text-left text-sm font-medium transition-colors ${
                       active
-                        ? "bg-gv-gold/10 text-gv-gold"
-                        : "text-gv-muted hover:bg-white/5 hover:text-white"
+                        ? "border-[#C9A84C] bg-gv-gold/10 text-gv-gold"
+                        : "border-transparent text-gv-muted hover:text-gv-gold"
                     }`}
                   >
-                    <span className="text-lg" aria-hidden>
-                      {cat.emoji}
-                    </span>
                     <span className="flex-1">{categoryLabel(cat, language)}</span>
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${
