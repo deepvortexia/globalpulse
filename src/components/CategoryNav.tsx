@@ -82,10 +82,10 @@ export default function CategoryNav({
         aria-label="Categories"
         className="hidden border-b border-gv-border bg-gv-bg/60 backdrop-blur-md sm:block"
       >
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
           <div
-            className="no-scrollbar relative flex gap-1 overflow-x-auto py-2.5 pr-32"
-            style={{ scrollPaddingRight: "128px" }}
+            className="no-scrollbar relative flex gap-1 overflow-x-auto py-2.5 pr-16"
+            style={{ scrollPaddingRight: "64px" }}
           >
             {CATEGORIES.filter((cat) => cat.id !== "fifa").map((cat) => {
               const active = cat.id === activeId;
@@ -99,7 +99,7 @@ export default function CategoryNav({
                   data-category={cat.id}
                   onClick={() => onChange(cat.id)}
                   aria-pressed={active}
-                  className={`relative flex flex-shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                  className={`relative flex flex-shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
                     active
                       ? "border-gv-gold text-gv-gold shadow-[0_0_12px_rgba(201,168,76,0.5)]"
                       : cat.id === "fifa"
@@ -126,6 +126,15 @@ export default function CategoryNav({
               style={{ left: underline.left, width: underline.width }}
             />
           </div>
+
+          {/* Right-edge fade: signals there are more pills (e.g. Sports) to
+              scroll to. Sits outside the scroll container so it stays pinned,
+              and is pointer-events-none so a partially-faded pill stays
+              clickable. */}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-y-0 right-4 w-16 bg-gradient-to-l from-gv-bg to-transparent sm:right-6"
+          />
         </div>
       </nav>
 
