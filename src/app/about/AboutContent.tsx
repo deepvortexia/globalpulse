@@ -43,7 +43,7 @@ const COPY: Record<Language, Copy> = {
     back: "← Back to news",
     hero: {
       eyebrow: "World News AI Aggregator",
-      title: "The Google of News",
+      title: "Where the World's News Spirals In",
       subtitle:
         "GlobeVortex is a bilingual FR/EN, AI-powered world news aggregator — international news powered by AI, drawn from 50+ trusted sources worldwide and distilled by Claude.",
     },
@@ -90,7 +90,7 @@ const COPY: Record<Language, Copy> = {
     back: "← Retour aux actualités",
     hero: {
       eyebrow: "Agrégateur de nouvelles IA",
-      title: "Le Google de l'actualité",
+      title: "Là où l'actualité mondiale tourbillonne",
       subtitle:
         "GlobeVortex est un agrégateur de nouvelles IA bilingue FR/EN — l'actualité internationale propulsée par l'IA, puisée dans plus de 50 sources fiables à travers le monde et synthétisée par Claude.",
     },
