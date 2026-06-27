@@ -10,7 +10,7 @@ export const revalidate = 60;
 // NewsBoard filters by language + category and paginates entirely client-side,
 // so hand it a broad pool spanning both languages and every category.
 const HOME_POOL_SIZE = 1000;
-const HOME_WINDOW_HOURS = 48;
+const HOME_WINDOW_HOURS = 168;
 
 export default async function Home() {
   let articles: Article[] = [];

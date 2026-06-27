@@ -69,10 +69,13 @@ export async function getArticles({
   const from = (safePage - 1) * pageSize;
   const to = from + pageSize - 1;
 
+  // Window on created_at (ingestion time) so recently-seeded articles always
+  // show, regardless of their original RSS publish date; still order newest-
+  // published first for display.
   let query = getServiceRoleClient()
     .from("articles")
     .select("*")
-    .gte("published_at", since)
+    .gte("created_at", since)
     .order("published_at", { ascending: false })
     .range(from, to);
 
