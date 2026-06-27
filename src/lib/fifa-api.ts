@@ -171,9 +171,9 @@ interface EspnScoreboard {
   events?: EspnEvent[];
 }
 
-async function getJson<T>(url: string, revalidate: number): Promise<T> {
+async function getJson<T>(url: string, revalidate: number | null): Promise<T> {
   const res = await fetch(url, {
-    next: { revalidate },
+    ...(revalidate === null ? { cache: "no-store" } : { next: { revalidate } }),
     headers: { Accept: "application/json" },
   });
   if (!res.ok) throw new Error(`${url} → ${res.status}`);
@@ -255,7 +255,7 @@ export async function fetchTeams(): Promise<FifaTeam[]> {
 
 export async function fetchMatches(teams?: FifaTeam[]): Promise<FifaMatch[]> {
   const [board, teamList] = await Promise.all([
-    getJson<EspnScoreboard>(ESPN_SCOREBOARD, LIVE_REVALIDATE_SECONDS),
+    getJson<EspnScoreboard>(ESPN_SCOREBOARD, null),
     teams ? Promise.resolve(teams) : fetchTeams(),
   ]);
 

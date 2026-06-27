@@ -5,7 +5,7 @@ import type { ApiResponse } from "@/types";
 // Cached for 30s at the route level. Live scores come from ESPN and standings
 // from worldcup26.ir (see fifa-api); their own revalidate windows cap how often
 // each upstream is hit, and this route caps how often any of them is hit at all.
-export const revalidate = 30;
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
