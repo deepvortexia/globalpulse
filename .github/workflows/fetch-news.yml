@@ -1,0 +1,28 @@
+name: Fetch news (15-min cron)
+
+# Drives the Supabase ingestion job. Vercel Hobby caps native cron at once/day,
+# so we trigger the secured endpoint from GitHub Actions instead. Schedule is
+# best-effort (GitHub may delay under load). Requires repo secret CRON_SECRET.
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+
+# Avoid overlapping runs if one is slow.
+concurrency:
+  group: fetch-news
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger /api/cron/fetch-news
+        run: |
+          code=$(curl -s -o response.json -w "%{http_code}" --max-time 300 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://globevortex.com/api/cron/fetch-news")
+          echo "HTTP $code"
+          cat response.json || true
+          echo
+          test "$code" = "200"
