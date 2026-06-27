@@ -16,12 +16,16 @@ export interface DbArticleRow {
   published_at: string | null;
   created_at: string;
   score: number | null;
+  importance_score: number | null;
 }
 
 const DEFAULT_PAGE_SIZE = 24;
 const DEFAULT_SINCE_HOURS = 24;
+// Top Stories: only genuinely high-importance items, recent, capped.
+const TOP_STORIES_MIN_SCORE = 85;
+const TOP_STORIES_LIMIT = 20;
 
-type ArticleCategory = Exclude<CategoryId, "all">;
+type ArticleCategory = Exclude<CategoryId, "all" | "top">;
 
 const VALID_CATEGORIES: ReadonlySet<string> = new Set<ArticleCategory>([
   "world", "politics", "economy", "science", "climate",
@@ -85,6 +89,28 @@ export async function getArticles({
 
   const { data, error } = await query;
   if (error) throw new Error(`Supabase read failed: ${error.message}`);
+
+  return (data as DbArticleRow[]).map(rowToArticle);
+}
+
+// Reads the highest-importance recent articles for the Top Stories rail. Filters
+// to importance_score >= 85 within the last `sinceHours` (default 24h), ordered
+// most important first, capped at 20. Server-side only (service-role client),
+// mirroring getArticles. Importance scores are written by the fetch-news cron.
+export async function getTopStories({
+  sinceHours = DEFAULT_SINCE_HOURS,
+}: { sinceHours?: number } = {}): Promise<Article[]> {
+  const since = new Date(Date.now() - sinceHours * 60 * 60 * 1000).toISOString();
+
+  const { data, error } = await getServiceRoleClient()
+    .from("articles")
+    .select("*")
+    .gte("created_at", since)
+    .gte("importance_score", TOP_STORIES_MIN_SCORE)
+    .order("importance_score", { ascending: false })
+    .limit(TOP_STORIES_LIMIT);
+
+  if (error) throw new Error(`Supabase top-stories read failed: ${error.message}`);
 
   return (data as DbArticleRow[]).map(rowToArticle);
 }

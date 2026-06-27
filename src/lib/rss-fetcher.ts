@@ -2,7 +2,7 @@ import Parser from "rss-parser";
 import { RSS_SOURCES } from "./rss-sources";
 import type { Article, CategoryId, RSSSource } from "@/types";
 
-type ArticleCategory = Exclude<CategoryId, "all">;
+type ArticleCategory = Exclude<CategoryId, "all" | "top">;
 
 // Keyword-based classification run on every article's title + description. The
 // first matching topic wins; anything unmatched falls back to "world". This

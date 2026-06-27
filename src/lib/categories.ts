@@ -12,6 +12,7 @@ export interface CategoryMeta {
 // bucket (no article ever carries it); every other id is a real Article
 // category produced by the rss-fetcher's category mapping.
 export const CATEGORIES: CategoryMeta[] = [
+  { id: "top", label: "Top Stories", labelFr: "À la une", labelZh: "头条", emoji: "🔴" },
   { id: "all", label: "All", labelFr: "Tout", labelZh: "全部", emoji: "🌐" },
   { id: "world", label: "World", labelFr: "Monde", labelZh: "世界", emoji: "🌍" },
   { id: "politics", label: "Politics", labelFr: "Politique", labelZh: "政治", emoji: "🏛️" },
@@ -25,9 +26,10 @@ export const CATEGORIES: CategoryMeta[] = [
   { id: "fifa", label: "FIFA 2026", labelFr: "FIFA 2026", labelZh: "世界杯 2026", emoji: "⚽" },
 ];
 
-// Real (non-virtual) article categories.
+// Real (non-virtual) article categories. `top` and `all` are virtual buckets
+// no article ever carries, so both are excluded.
 export const ARTICLE_CATEGORY_IDS = CATEGORIES.map((c) => c.id).filter(
-  (id): id is Exclude<CategoryId, "all"> => id !== "all",
+  (id): id is Exclude<CategoryId, "all" | "top"> => id !== "all" && id !== "top",
 );
 
 // Accepts either a CategoryMeta (from the nav) or a bare category id (from a

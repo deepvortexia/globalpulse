@@ -12,6 +12,8 @@ import Footer from "@/components/Footer";
 
 interface NewsBoardProps {
   articles: Article[];
+  // Prefetched high-importance set shown when the "top" category is selected.
+  topStories?: Article[];
   error?: string | null;
 }
 
@@ -25,7 +27,7 @@ const ARTICLES_PER_PAGE = 24;
 // Client boundary that owns the language toggle and everything that reacts to
 // it (header, heading, grid). Articles arrive pre-fetched from the Server
 // Component as props — no data fetching happens here.
-export default function NewsBoard({ articles, error }: NewsBoardProps) {
+export default function NewsBoard({ articles, topStories = [], error }: NewsBoardProps) {
   const [language, setLanguage] = useState<Language>("en");
   const [categoryId, setCategoryId] = useState<CategoryId>("all");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -51,11 +53,16 @@ export default function NewsBoard({ articles, error }: NewsBoardProps) {
     return tally;
   }, [languageArticles]);
 
-  // Narrow the language pool to the selected category (all = no filter).
+  // Narrow the language pool to the selected category (all = no filter). "top"
+  // is a virtual bucket served from the prefetched topStories set rather than
+  // the main pool; still apply the strict per-language filter for consistency.
   const visibleArticles = useMemo(() => {
+    if (categoryId === "top") {
+      return topStories.filter((article) => article.language === language);
+    }
     if (categoryId === "all") return languageArticles;
     return languageArticles.filter((article) => article.category === categoryId);
-  }, [languageArticles, categoryId]);
+  }, [languageArticles, categoryId, topStories, language]);
 
   // Switching category or language invalidates the current page's slice.
   useEffect(() => {

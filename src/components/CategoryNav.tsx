@@ -75,6 +75,9 @@ export default function CategoryNav({
           >
             {CATEGORIES.filter((cat) => cat.id !== "fifa").map((cat) => {
               const active = cat.id === activeId;
+              // Top Stories is a virtual bucket with its own red treatment and
+              // no count badge; it stays first and is never filtered out.
+              const isTop = cat.id === "top";
               return (
                 <button
                   key={cat.id}
@@ -83,19 +86,25 @@ export default function CategoryNav({
                   onClick={() => onChange(cat.id)}
                   aria-pressed={active}
                   className={`flex flex-shrink-0 items-center gap-1.5 rounded-full border border-transparent px-3.5 py-1.5 text-xs transition-all ${
-                    active
-                      ? "bg-gradient-to-r from-[#C9A84C] to-[#E8C96D] font-bold text-black shadow-[0_0_12px_rgba(201,168,76,0.3)]"
-                      : "font-medium text-gv-muted hover:text-gv-gold"
+                    isTop
+                      ? `bg-[#DC2626] font-bold text-white hover:bg-[#b91c1c] ${
+                          active ? "shadow-[0_0_12px_rgba(220,38,38,0.5)] ring-2 ring-white/40" : ""
+                        }`
+                      : active
+                        ? "bg-gradient-to-r from-[#C9A84C] to-[#E8C96D] font-bold text-black shadow-[0_0_12px_rgba(201,168,76,0.3)]"
+                        : "font-medium text-gv-muted hover:text-gv-gold"
                   }`}
                 >
                   <span>{categoryLabel(cat, language)}</span>
-                  <span
-                    className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${
-                      active ? "bg-black/20 text-black" : "bg-white/5 text-gv-muted"
-                    }`}
-                  >
-                    {counts[cat.id] ?? 0}
-                  </span>
+                  {!isTop && (
+                    <span
+                      className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${
+                        active ? "bg-black/20 text-black" : "bg-white/5 text-gv-muted"
+                      }`}
+                    >
+                      {counts[cat.id] ?? 0}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -157,6 +166,8 @@ export default function CategoryNav({
             <nav aria-label="Categories" className="flex-1 overflow-y-auto py-2">
               {CATEGORIES.filter((cat) => cat.id !== "fifa").map((cat) => {
                 const active = cat.id === activeId;
+                // Top Stories: first row, red styling, no count badge.
+                const isTop = cat.id === "top";
                 return (
                   <button
                     key={cat.id}
@@ -167,19 +178,25 @@ export default function CategoryNav({
                     }}
                     aria-pressed={active}
                     className={`flex min-h-[44px] w-full items-center gap-3 border-l-2 px-4 py-3 text-left text-sm font-medium transition-colors ${
-                      active
-                        ? "border-[#C9A84C] bg-gv-gold/10 text-gv-gold"
-                        : "border-transparent text-gv-muted hover:text-gv-gold"
+                      isTop
+                        ? active
+                          ? "border-[#DC2626] bg-[#DC2626] font-bold text-white"
+                          : "border-[#DC2626] bg-[#DC2626]/10 font-bold text-[#DC2626] hover:bg-[#DC2626]/20"
+                        : active
+                          ? "border-[#C9A84C] bg-gv-gold/10 text-gv-gold"
+                          : "border-transparent text-gv-muted hover:text-gv-gold"
                     }`}
                   >
                     <span className="flex-1">{categoryLabel(cat, language)}</span>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${
-                        active ? "bg-gv-gold/20 text-gv-gold" : "bg-white/5 text-gv-muted"
-                      }`}
-                    >
-                      {counts[cat.id] ?? 0}
-                    </span>
+                    {!isTop && (
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${
+                          active ? "bg-gv-gold/20 text-gv-gold" : "bg-white/5 text-gv-muted"
+                        }`}
+                      >
+                        {counts[cat.id] ?? 0}
+                      </span>
+                    )}
                   </button>
                 );
               })}

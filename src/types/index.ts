@@ -1,6 +1,7 @@
 export type Language = "en" | "fr";
 
 export type CategoryId =
+  | "top"
   | "all"
   | "world"
   | "politics"
@@ -28,7 +29,7 @@ export interface Article {
   url: string;
   source: string;
   language: Language;
-  category: Exclude<CategoryId, "all">;
+  category: Exclude<CategoryId, "all" | "top">;
   country: string;
   publishedAt: string;
   imageUrl: string | null;

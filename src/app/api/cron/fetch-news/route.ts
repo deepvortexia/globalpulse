@@ -17,7 +17,7 @@ const MAX_NEW_PER_RUN = Number(process.env.CRON_MAX_ARTICLES ?? 60);
 const HAIKU_CONCURRENCY = 5;
 const URL_PAGE_SIZE = 1000;
 
-type ArticleCategory = Exclude<CategoryId, "all">;
+type ArticleCategory = Exclude<CategoryId, "all" | "top">;
 
 const VALID_CATEGORIES: ReadonlySet<string> = new Set<ArticleCategory>([
   "world", "politics", "economy", "science", "climate",
@@ -36,6 +36,12 @@ function isAuthorized(req: Request): boolean {
 interface Classification {
   category: ArticleCategory;
   summary: string;
+}
+
+interface Processed {
+  classification: Classification;
+  importanceScore: number;
+  failed: boolean;
 }
 
 function extractJson(text: string): unknown {
@@ -94,6 +100,55 @@ Respond with ONLY a JSON object, no markdown formatting:
   }
 }
 
+// Asks Haiku for a 0-100 global-importance rating of an article. The summary
+// (Haiku-written, or the RSS fallback) gives better signal than the raw feed
+// description. Returns 0 on any failure so a flaky call never blocks ingestion.
+async function scoreImportance(title: string, summary: string): Promise<number> {
+  try {
+    const message = await anthropic.messages.create({
+      model: SUMMARY_MODEL,
+      max_tokens: 30,
+      stream: false,
+      messages: [
+        {
+          role: "user",
+          content: `Rate the global importance of this news article on a 0-100 scale.
+90-100 = global breaking news (war, major crisis, world leader event).
+75-89 = major national politics or economy.
+50-74 = notable regional, tech, or science story.
+0-49 = routine or local news.
+
+Title: ${title}
+Summary: ${summary}
+
+Respond with ONLY a JSON object, no markdown formatting:
+{"score": <integer 0-100>}`,
+        },
+      ],
+    });
+
+    const textBlock = message.content.find((b) => b.type === "text");
+    if (!textBlock || textBlock.type !== "text") throw new Error("No text content from Claude");
+
+    const parsed = extractJson(textBlock.text) as { score?: unknown };
+    const raw = typeof parsed.score === "number" ? parsed.score : Number(parsed.score);
+    if (!Number.isFinite(raw)) throw new Error(`Non-numeric score: ${String(parsed.score)}`);
+    return Math.max(0, Math.min(100, Math.round(raw)));
+  } catch (error) {
+    console.error(`[cron/fetch-news] Importance scoring failed for "${title}":`, error);
+    return 0;
+  }
+}
+
+// Full per-article pipeline: classify + summarize, then score importance off the
+// resulting summary. Two sequential Haiku calls per article; the outer mapPool
+// bounds how many run at once.
+async function processArticle(article: Article): Promise<Processed> {
+  const { result, failed } = await classifyAndSummarize(article);
+  const importanceScore = await scoreImportance(article.title, result.summary);
+  return { classification: result, importanceScore, failed };
+}
+
 // Loads every stored URL into a Set for O(1) dedup. Pages through the table
 // (column-only) rather than sending candidate URLs in a giant `IN (...)` query
 // string, which PostgREST rejects. The table is capped at 7 days of retention,
@@ -116,8 +171,8 @@ async function loadStoredUrls(
   return stored;
 }
 
-// Maps an Article + its classification to a DB insert row.
-function toRow(article: Article, c: Classification) {
+// Maps an Article + its classification + importance score to a DB insert row.
+function toRow(article: Article, c: Classification, importanceScore: number) {
   return {
     title: article.title,
     summary: c.summary,
@@ -128,6 +183,7 @@ function toRow(article: Article, c: Classification) {
     language: article.language,
     published_at: article.publishedAt,
     score: 0,
+    importance_score: importanceScore,
   };
 }
 
@@ -165,10 +221,12 @@ export async function GET(req: Request) {
     // 3. Bound per-run work (newest first); the rest backfills next run.
     const toProcess = fresh.slice(0, MAX_NEW_PER_RUN);
 
-    // 4. Classify + summarize with Haiku under a concurrency cap.
-    const classified = await mapPool(toProcess, HAIKU_CONCURRENCY, classifyAndSummarize);
-    const errors = classified.filter((c) => c.failed).length;
-    const rows = toProcess.map((article, i) => toRow(article, classified[i].result));
+    // 4. Classify + summarize + importance-score with Haiku under a concurrency cap.
+    const processed = await mapPool(toProcess, HAIKU_CONCURRENCY, processArticle);
+    const errors = processed.filter((p) => p.failed).length;
+    const rows = toProcess.map((article, i) =>
+      toRow(article, processed[i].classification, processed[i].importanceScore),
+    );
 
     // 5. Insert (upsert/ignore on the unique url to absorb any race).
     let inserted = 0;
