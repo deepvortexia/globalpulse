@@ -181,6 +181,15 @@ export async function GET(req: Request) {
       inserted = data?.length ?? 0;
     }
 
+    // 6. Purge articles older than 7 days. Non-fatal: a cleanup failure must
+    // not fail an otherwise-successful fetch run.
+    let purged = true;
+    const { error: purgeError } = await db.rpc("delete_old_articles");
+    if (purgeError) {
+      purged = false;
+      console.error("[cron/fetch-news] delete_old_articles failed:", purgeError.message);
+    }
+
     const duration = Date.now() - start;
     return Response.json({
       success: true,
@@ -189,6 +198,7 @@ export async function GET(req: Request) {
       deferred: fresh.length - toProcess.length,
       fetched: fetched.length,
       errors,
+      purged,
       duration,
     });
   } catch (error) {
