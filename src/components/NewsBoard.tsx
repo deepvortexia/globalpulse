@@ -29,7 +29,7 @@ const ARTICLES_PER_PAGE = 24;
 // Component as props — no data fetching happens here.
 export default function NewsBoard({ articles, topStories = [], error }: NewsBoardProps) {
   const [language, setLanguage] = useState<Language>("en");
-  const [categoryId, setCategoryId] = useState<CategoryId>("all");
+  const [categoryId, setCategoryId] = useState<CategoryId>("top");
   const [menuOpen, setMenuOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
