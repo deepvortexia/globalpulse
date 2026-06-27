@@ -28,6 +28,16 @@ function NewsCard({ article, language, featured = false }: NewsCardProps) {
   const [tilt, setTilt] = useState({ rotateX: 0, rotateY: 0 });
   const [hovering, setHovering] = useState(false);
 
+  // Relative "time ago" depends on the current clock, so it must not be
+  // computed during render — that diverges between the SSR snapshot and the
+  // hydration render (React error #418). Start empty (matching SSR) and fill
+  // it in after mount.
+  const [time, setTime] = useState<string>("");
+
+  useEffect(() => {
+    setTime(formatPublished(article.publishedAt, language));
+  }, [article.publishedAt, language]);
+
   // Only enable the 3D tilt on devices with a fine pointer that can hover
   // (mouse/trackpad). Touch devices skip it entirely — they can't hover, and
   // the tilt would otherwise stick after a tap. Starts false so SSR and touch
@@ -68,8 +78,6 @@ function NewsCard({ article, language, featured = false }: NewsCardProps) {
   const rotateX = tiltActive ? tilt.rotateX : 0;
   const rotateY = tiltActive ? tilt.rotateY : 0;
 
-  const time = formatPublished(article.publishedAt, language);
-
   return (
     <a
       ref={cardRef}
@@ -103,7 +111,10 @@ function NewsCard({ article, language, featured = false }: NewsCardProps) {
         </p>
       )}
 
-      <div className="mt-auto flex items-center gap-2 pt-2 text-xs text-gv-muted">
+      <div
+        className="mt-auto flex items-center gap-2 pt-2 text-xs text-gv-muted"
+        suppressHydrationWarning
+      >
         <span className="font-medium text-gv-muted">{article.source}</span>
         {time && (
           <>
