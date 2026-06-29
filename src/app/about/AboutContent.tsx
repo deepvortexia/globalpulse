@@ -13,6 +13,16 @@ interface Section {
   body: string[];
 }
 
+interface Step {
+  title: string;
+  text: string;
+}
+
+interface HowSection {
+  heading: string;
+  steps: Step[];
+}
+
 interface Tech {
   name: string;
   detail: string;
@@ -26,7 +36,7 @@ interface Copy {
     subtitle: string;
   };
   mission: Section;
-  how: Section;
+  how: HowSection;
   techTitle: string;
   tech: Tech[];
   creator: Section;
@@ -34,53 +44,76 @@ interface Copy {
   cta: string;
 }
 
-// Full page copy in both languages. SEO keywords are woven into the prose
-// naturally rather than stuffed: "world news aggregator", "AI news",
-// "bilingual news FR EN", "actualités mondiales", "agrégateur nouvelles IA",
-// "international news powered by AI".
 const COPY: Record<Language, Copy> = {
   en: {
     back: "← Back to news",
     hero: {
       eyebrow: "World News AI Aggregator",
-      title: "Where the World's News Spirals In",
+      title: "The World's News, Distilled by AI",
       subtitle:
-        "GlobeVortex is a bilingual FR/EN, AI-powered world news aggregator — international news powered by AI, drawn from 50+ trusted sources worldwide and distilled by Claude.",
+        "GlobeVortex is a bilingual FR/EN AI-powered international news aggregator — drawing from 50+ trusted sources worldwide, summarized and scored by Claude AI.",
     },
     mission: {
       heading: "Our Mission",
       body: [
-        "The world produces more news than any person could ever read. GlobeVortex exists to cut through that noise: a single, calm place where the day's most important international news is gathered, organized, and summarized — in both English and French.",
-        "We believe staying informed shouldn't mean drowning in tabs or paywalls. Our AI news engine reads the world's headlines so you can grasp what matters in minutes, whether you think in English or in French.",
+        "The world produces more news than any person could ever read. GlobeVortex exists to cut through that noise: a single, calm place where the day's most important international stories are gathered, organized, and summarized — in both English and French.",
+        "We believe staying informed shouldn't mean drowning in tabs or paywalls. Our AI reads the world's headlines so you can grasp what matters in minutes, in the language you think in.",
       ],
     },
     how: {
       heading: "How It Works",
-      body: [
-        "GlobeVortex continuously pulls live headlines from 50+ RSS feeds spanning major outlets across every continent — from world affairs and politics to economy, science, climate, health, culture and sports.",
-        "Each story is then processed by Anthropic's Claude AI, which writes concise, neutral summaries in both English and French. The result is a fast, bilingual news aggregator that respects your time and your language.",
+      steps: [
+        {
+          title: "Continuous collection",
+          text: "Every 15 minutes, our automated pipeline pulls fresh headlines from 50+ RSS feeds spanning major outlets across every continent — from world affairs and geopolitics to economy, science, climate, health, culture and sports.",
+        },
+        {
+          title: "AI processing by Claude",
+          text: "Each story is sent to Claude Haiku, Anthropic's fast and efficient AI model. In a single API call, Claude classifies the article into one of 9 categories, writes a concise 2-sentence summary in the article's own language (French or English), and assigns a global importance score from 0 to 100.",
+        },
+        {
+          title: "Importance scoring",
+          text: "The scoring scale: 90–100 for global breaking news (wars, major crises, world leader events), 75–89 for major national politics or economy, 50–74 for notable regional or science stories, and 0–49 for routine local news. Only the highest-scored articles surface in the Top Stories section.",
+        },
+        {
+          title: "Instant delivery",
+          text: "Processed articles are stored and served instantly to the GlobeVortex interface — no timeouts, no delays. The feed refreshes continuously so the page always reflects the last 7 days of world news.",
+        },
       ],
     },
     techTitle: "Technologies",
     tech: [
       {
         name: "Next.js 16",
-        detail: "Server-rendered React with the App Router for instant, SEO-friendly pages.",
+        detail:
+          "Server-rendered React with the App Router for instant, SEO-friendly pages and real-time revalidation.",
       },
       {
-        name: "Anthropic Claude Haiku",
-        detail: "The AI model that reads, classifies and summarizes every story in FR and EN.",
+        name: "Claude Haiku — Anthropic",
+        detail:
+          "The AI model that classifies, summarizes and scores every story in one single API call — fast, cost-efficient, and neutral.",
       },
       {
         name: "50+ RSS Sources",
-        detail: "Trusted international outlets aggregated live from around the globe.",
+        detail:
+          "Trusted international outlets aggregated live from every continent — including Le Monde, BBC, CNN, Al Jazeera, Radio-Canada, RFI, La Presse and many more.",
+      },
+      {
+        name: "Vercel",
+        detail:
+          "Edge deployment for global low-latency delivery, with automated builds on every code push.",
+      },
+      {
+        name: "GitHub Actions",
+        detail:
+          "Our news pipeline runs as a scheduled cron job every 15 minutes — independent of Vercel's serverless limits.",
       },
     ],
     creator: {
       heading: "The Creator",
       body: [
         "GlobeVortex is built by Yannick Boisclair under the DeepVortex brand — an independent studio crafting AI-first products that make information faster and clearer for everyone.",
-        "It is one expression of a simple idea: that artificial intelligence, used thoughtfully, can give anyone a clearer window on the world.",
+        "It is one expression of a simple idea: that artificial intelligence, used thoughtfully, can give anyone a clearer window on the world — regardless of language or location.",
       ],
     },
     ctaHeading: "Ready to explore the world's news?",
@@ -90,44 +123,71 @@ const COPY: Record<Language, Copy> = {
     back: "← Retour aux actualités",
     hero: {
       eyebrow: "Agrégateur de nouvelles IA",
-      title: "Là où l'actualité mondiale tourbillonne",
+      title: "L'actualité mondiale, distillée par l'IA",
       subtitle:
-        "GlobeVortex est un agrégateur de nouvelles IA bilingue FR/EN — l'actualité internationale propulsée par l'IA, puisée dans plus de 50 sources fiables à travers le monde et synthétisée par Claude.",
+        "GlobeVortex est un agrégateur de nouvelles international bilingue FR/EN propulsé par l'IA — puisant dans plus de 50 sources mondiales de confiance, résumées et scorées par Claude AI.",
     },
     mission: {
       heading: "Notre mission",
       body: [
-        "Le monde produit plus d'actualités qu'une personne ne pourra jamais en lire. GlobeVortex existe pour percer ce bruit : un seul endroit, apaisé, où les actualités mondiales les plus importantes du jour sont rassemblées, organisées et résumées — en français comme en anglais.",
-        "Nous croyons que rester informé ne devrait pas signifier se noyer dans les onglets ou les murs payants. Notre moteur d'actualités IA lit les manchettes du monde pour que vous saisissiez l'essentiel en quelques minutes, que vous pensiez en français ou en anglais.",
+        "Le monde produit plus de nouvelles que n'importe quelle personne ne pourrait jamais lire. GlobeVortex existe pour traverser ce bruit : un endroit calme et unique où les histoires internationales les plus importantes de la journée sont rassemblées, organisées et résumées — en français et en anglais.",
+        "Nous croyons que rester informé ne devrait pas signifier se noyer dans des onglets ou des paywalls. Notre IA lit les manchettes mondiales pour que vous puissiez saisir l'essentiel en quelques minutes, dans la langue dans laquelle vous pensez.",
       ],
     },
     how: {
-      heading: "Comment ça marche",
-      body: [
-        "GlobeVortex récupère en continu les manchettes en direct de plus de 50 flux RSS issus de grands médias de tous les continents — des affaires mondiales et de la politique à l'économie, la science, le climat, la santé, la culture et le sport.",
-        "Chaque article est ensuite traité par Claude, l'IA d'Anthropic, qui rédige des résumés concis et neutres en français et en anglais. Le résultat : un agrégateur de nouvelles bilingue et rapide, qui respecte votre temps et votre langue.",
+      heading: "Comment ça fonctionne",
+      steps: [
+        {
+          title: "Collecte continue",
+          text: "Toutes les 15 minutes, notre pipeline automatisé récupère les dernières manchettes de 50+ flux RSS couvrant les grands médias de chaque continent — des affaires mondiales et de la géopolitique à l'économie, la science, le climat, la santé, la culture et les sports.",
+        },
+        {
+          title: "Traitement par Claude AI",
+          text: "Chaque article est envoyé à Claude Haiku, le modèle IA rapide et efficace d'Anthropic. En un seul appel API, Claude classifie l'article dans l'une des 9 catégories, rédige un résumé concis en 2 phrases dans la langue de l'article (français ou anglais), et attribue un score d'importance mondiale de 0 à 100.",
+        },
+        {
+          title: "Score d'importance",
+          text: "L'échelle de scoring : 90–100 pour les breaking news mondiaux (guerres, crises majeures, événements de chefs d'État), 75–89 pour la politique nationale majeure ou l'économie, 50–74 pour les actualités régionales ou scientifiques notables, et 0–49 pour les nouvelles locales routinières. Seuls les articles avec les scores les plus élevés apparaissent dans la section À la une.",
+        },
+        {
+          title: "Livraison instantanée",
+          text: "Les articles traités sont stockés et servis instantanément à l'interface GlobeVortex — sans timeout, sans délai. Le flux se rafraîchit en continu pour que la page reflète toujours les 7 derniers jours de l'actualité mondiale.",
+        },
       ],
     },
     techTitle: "Technologies",
     tech: [
       {
         name: "Next.js 16",
-        detail: "React rendu côté serveur avec l'App Router pour des pages instantanées et optimisées SEO.",
+        detail:
+          "React rendu côté serveur avec l'App Router pour des pages instantanées, optimisées SEO et avec revalidation en temps réel.",
       },
       {
-        name: "Anthropic Claude Haiku",
-        detail: "Le modèle d'IA qui lit, classe et résume chaque article en FR et EN.",
+        name: "Claude Haiku — Anthropic",
+        detail:
+          "Le modèle IA qui classifie, résume et score chaque article en un seul appel API — rapide, économique et neutre.",
       },
       {
-        name: "Plus de 50 sources RSS",
-        detail: "Des médias internationaux de confiance agrégés en direct du monde entier.",
+        name: "50+ sources RSS",
+        detail:
+          "Médias internationaux de confiance agrégés en direct de chaque continent — dont Le Monde, BBC, CNN, Al Jazeera, Radio-Canada, RFI, La Presse et bien d'autres.",
+      },
+      {
+        name: "Vercel",
+        detail:
+          "Déploiement sur l'edge pour une livraison mondiale à faible latence, avec builds automatiques à chaque mise à jour du code.",
+      },
+      {
+        name: "GitHub Actions",
+        detail:
+          "Notre pipeline d'actualités s'exécute comme un cron job toutes les 15 minutes — indépendamment des limites serverless de Vercel.",
       },
     ],
     creator: {
       heading: "Le créateur",
       body: [
-        "GlobeVortex est conçu par Yannick Boisclair sous la marque DeepVortex — un studio indépendant qui façonne des produits axés sur l'IA pour rendre l'information plus rapide et plus claire pour tous.",
-        "C'est l'expression d'une idée simple : utilisée avec discernement, l'intelligence artificielle peut offrir à chacun une fenêtre plus nette sur le monde.",
+        "GlobeVortex est construit par Yannick Boisclair sous la marque DeepVortex — un studio indépendant créant des produits IA-first qui rendent l'information plus rapide et plus claire pour tous.",
+        "C'est l'expression d'une idée simple : que l'intelligence artificielle, utilisée avec discernement, peut offrir à n'importe qui une fenêtre plus claire sur le monde — quelle que soit sa langue ou sa localisation.",
       ],
     },
     ctaHeading: "Prêt à explorer l'actualité mondiale ?",
@@ -214,12 +274,12 @@ export default function AboutContent() {
         <Prose section={t.mission} className="mt-20" />
 
         {/* How it works */}
-        <Prose section={t.how} className="mt-16" />
+        <HowItWorksSection section={t.how} className="mt-16" />
 
         {/* Technologies */}
         <section className="mt-16">
           <SectionHeading>{t.techTitle}</SectionHeading>
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {t.tech.map((tech) => (
               <div
                 key={tech.name}
@@ -276,6 +336,27 @@ function Prose({ section, className }: { section: Section; className?: string })
           </p>
         ))}
       </div>
+    </section>
+  );
+}
+
+function HowItWorksSection({ section, className }: { section: HowSection; className?: string }) {
+  return (
+    <section className={className}>
+      <SectionHeading>{section.heading}</SectionHeading>
+      <ol className="mt-8 space-y-6">
+        {section.steps.map((step, i) => (
+          <li key={i} className="flex gap-4">
+            <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-gv-gold/40 bg-gv-gold/10 text-xs font-bold text-gv-gold">
+              {i + 1}
+            </span>
+            <div>
+              <h3 className="font-display text-base font-semibold text-white">{step.title}</h3>
+              <p className="mt-1 text-base leading-relaxed text-gv-muted">{step.text}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
     </section>
   );
 }
