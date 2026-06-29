@@ -59,13 +59,12 @@ export default function Footer({ language }: FooterProps) {
 
         {/* Links row — placeholder pages, not yet live */}
         <div className="flex items-center gap-4 text-sm text-gv-muted">
-          <span className="cursor-not-allowed opacity-50">{text.contact}</span>
+          <a href="mailto:admin@globevortex.com" className="transition-colors hover:text-gv-gold">
+            {text.contact}
+          </a>
           <Link href="/about" className="transition-colors hover:text-gv-gold">
             {text.about}
           </Link>
-          <span className="rounded-full border border-gv-gold/40 px-2.5 py-0.5 text-xs text-gv-gold">
-            {text.soon}
-          </span>
         </div>
 
         {/* Copyright */}
