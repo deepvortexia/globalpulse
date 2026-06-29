@@ -160,3 +160,26 @@ export async function getTopStories({
 
   return deduped.slice(0, TOP_STORIES_TARGET).map(rowToArticle);
 }
+
+export async function searchArticles({
+  query,
+  language,
+  pageSize = 24,
+}: {
+  query: string;
+  language: "en" | "fr";
+  pageSize?: number;
+}): Promise<Article[]> {
+  if (!query.trim()) return [];
+  const db = getServiceRoleClient();
+  const term = `%${query.trim()}%`;
+  const { data, error } = await db
+    .from("articles")
+    .select("*")
+    .eq("language", language)
+    .or(`title.ilike.${term},summary.ilike.${term}`)
+    .order("published_at", { ascending: false })
+    .limit(pageSize);
+  if (error) throw new Error(`Search failed: ${error.message}`);
+  return (data as DbArticleRow[]).map(rowToArticle);
+}

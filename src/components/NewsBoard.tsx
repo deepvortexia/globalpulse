@@ -17,9 +17,30 @@ interface NewsBoardProps {
   error?: string | null;
 }
 
-const UI_TEXT: Record<Language, { latest: string; empty: string }> = {
-  en: { latest: "World · Right Now", empty: "No stories available right now." },
-  fr: { latest: "Le Monde · En Direct", empty: "Aucun article disponible pour le moment." },
+const UI_TEXT: Record<
+  Language,
+  {
+    latest: string;
+    empty: string;
+    searchPlaceholder: string;
+    searchResults: (n: number, q: string) => string;
+    searchEmpty: (q: string) => string;
+  }
+> = {
+  en: {
+    latest: "World · Right Now",
+    empty: "No stories available right now.",
+    searchPlaceholder: "Search news...",
+    searchResults: (n, q) => `${n} result${n !== 1 ? "s" : ""} for "${q}"`,
+    searchEmpty: (q) => `No results for "${q}"`,
+  },
+  fr: {
+    latest: "Le Monde · En Direct",
+    empty: "Aucun article disponible pour le moment.",
+    searchPlaceholder: "Rechercher...",
+    searchResults: (n, q) => `${n} résultat${n !== 1 ? "s" : ""} pour "${q}"`,
+    searchEmpty: (q) => `Aucun résultat pour "${q}"`,
+  },
 };
 
 const ARTICLES_PER_PAGE = 24;
@@ -32,6 +53,10 @@ export default function NewsBoard({ articles, topStories = [], error }: NewsBoar
   const [categoryId, setCategoryId] = useState<CategoryId>("top");
   const [menuOpen, setMenuOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Article[] | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
 
   // Strict per-language view: only ever show articles whose source language
   // matches the toggle (no cross-language fallback).
@@ -70,6 +95,40 @@ export default function NewsBoard({ articles, topStories = [], error }: NewsBoar
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [categoryId, language]);
 
+  // Debounced search: fires 400ms after the user stops typing.
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+    if (!trimmed) {
+      setSearchResults(null);
+      return;
+    }
+    if (trimmed.length < 2) return;
+
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const res = await fetch(
+          `/api/search?q=${encodeURIComponent(trimmed)}&lang=${language}`,
+        );
+        const data: unknown = await res.json();
+        setSearchResults(Array.isArray(data) ? (data as Article[]) : []);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, language]);
+
+  // Clicking a category pill exits search mode.
+  function handleCategoryChange(id: CategoryId) {
+    setCategoryId(id);
+    setSearchQuery("");
+    setSearchResults(null);
+  }
+
   const paginatedArticles = visibleArticles.slice(
     (currentPage - 1) * ARTICLES_PER_PAGE,
     currentPage * ARTICLES_PER_PAGE,
@@ -82,6 +141,7 @@ export default function NewsBoard({ articles, topStories = [], error }: NewsBoar
   };
 
   const text = UI_TEXT[language];
+  const isSearchActive = searchResults !== null || isSearching;
 
   return (
     <div className="flex min-h-screen flex-col text-white">
@@ -90,13 +150,55 @@ export default function NewsBoard({ articles, topStories = [], error }: NewsBoar
         onLanguageChange={setLanguage}
         onMenuClick={() => setMenuOpen(true)}
         articles={articles}
-        onFifaClick={() => setCategoryId("fifa")}
+        onFifaClick={() => handleCategoryChange("fifa")}
         fifaActive={categoryId === "fifa"}
       />
 
+      {/* Search bar */}
+      <div className="border-b border-gv-border/40 bg-gv-bg/60 px-4 py-3 sm:px-6">
+        <div className="relative mx-auto max-w-xl">
+          <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-gv-muted">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"
+              />
+            </svg>
+          </span>
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={text.searchPlaceholder}
+            className="w-full rounded-full border border-gv-border bg-transparent py-2.5 pl-10 pr-10 text-sm text-white placeholder-gv-muted transition-colors focus:border-gv-gold focus:outline-none"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery("");
+                setSearchResults(null);
+              }}
+              className="absolute inset-y-0 right-4 flex items-center text-gv-muted transition-colors hover:text-white"
+              aria-label="Clear search"
+            >
+              ×
+            </button>
+          )}
+        </div>
+      </div>
+
       <CategoryNav
         activeId={categoryId}
-        onChange={setCategoryId}
+        onChange={handleCategoryChange}
         counts={counts}
         language={language}
         menuOpen={menuOpen}
@@ -104,7 +206,25 @@ export default function NewsBoard({ articles, topStories = [], error }: NewsBoar
       />
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 pb-10 pt-6 sm:px-6">
-        {categoryId === "fifa" ? (
+        {/* Search results view */}
+        {isSearchActive ? (
+          <>
+            <div className="mb-8">
+              <p
+                className={`text-sm text-gv-muted ${isSearching ? "animate-pulse" : ""}`}
+              >
+                {isSearching
+                  ? text.searchPlaceholder
+                  : searchResults && searchResults.length > 0
+                    ? text.searchResults(searchResults.length, searchQuery.trim())
+                    : text.searchEmpty(searchQuery.trim())}
+              </p>
+            </div>
+            {!isSearching && searchResults && searchResults.length > 0 && (
+              <NewsGrid articles={searchResults} language={language} />
+            )}
+          </>
+        ) : categoryId === "fifa" ? (
           // FIFA hub has its own live-data pipeline and banner — it bypasses the
           // RSS article grid entirely.
           <FifaSection language={language} />
