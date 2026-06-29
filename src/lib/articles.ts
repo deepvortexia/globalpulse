@@ -21,7 +21,7 @@ export interface DbArticleRow {
 
 const DEFAULT_PAGE_SIZE = 24;
 const DEFAULT_SINCE_HOURS = 24;
-const TOP_STORIES_MIN_SCORE = 75;
+const TOP_STORIES_MIN_SCORE = 60;
 const TOP_STORIES_TARGET = 10;
 const TOP_STORIES_FALLBACK_CATEGORIES: ReadonlyArray<ArticleCategory> = [
   "world", "politics", "economy", "science", "climate",

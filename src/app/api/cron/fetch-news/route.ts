@@ -51,7 +51,7 @@ function extractJson(text: string): unknown {
 
 // Only articles published within this window are worth a Haiku call; older ones
 // are unlikely to surface as top news, so we skip the model and save the cost.
-const RECENCY_WINDOW_MS = 2 * 60 * 60 * 1000; // 2 hours
+const RECENCY_WINDOW_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 // Single Haiku call returning category + 2-sentence summary + 0-100 importance
 // score in one JSON response (merged from what used to be two sequential calls).
