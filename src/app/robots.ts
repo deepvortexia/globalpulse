@@ -4,7 +4,8 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: '*',
-      disallow: '/',
+      allow: '/',
+      disallow: ['/api/', '/api/cron/'],
     },
     sitemap: 'https://globevortex.com/sitemap.xml',
     host: 'https://globevortex.com',

@@ -73,7 +73,12 @@ export default async function Home() {
         "@id": "https://globevortex.com/#organization",
         "name": "GlobeVortex",
         "url": "https://globevortex.com",
-        "logo": "https://globevortex.com/logo.png",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://globevortex.com/logo.png",
+          "width": 512,
+          "height": 512,
+        },
         "foundingDate": "2026",
         "founder": {
           "@type": "Person",
