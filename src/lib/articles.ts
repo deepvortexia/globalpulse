@@ -189,6 +189,26 @@ export async function getArticleIdsForSitemap(): Promise<
   return data as Pick<DbArticleRow, "id" | "created_at">[];
 }
 
+// Sibling articles in the same category, highest-importance first, excluding
+// the one being viewed. Powers the "related" rail on the article page. Selects
+// only the columns the related cards render — `url` is omitted because related
+// links are internal (/article/[id]), never to the external source.
+export async function getRelatedArticles(
+  category: string,
+  excludeId: string,
+  limit = 4,
+): Promise<DbArticleRow[]> {
+  const { data, error } = await getServiceRoleClient()
+    .from("articles")
+    .select("id, title, source, category, published_at, created_at, language, image_url, summary")
+    .eq("category", category)
+    .neq("id", excludeId)
+    .order("importance_score", { ascending: false })
+    .limit(limit);
+  if (error || !data) return [];
+  return data as DbArticleRow[];
+}
+
 export async function searchArticles({
   query,
   language,

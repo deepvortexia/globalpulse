@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getArticleBySlug } from "@/lib/articles";
+import { getArticleBySlug, getRelatedArticles } from "@/lib/articles";
 import { categoryLabel } from "@/lib/categories";
 import type { CategoryId } from "@/types";
 
@@ -28,7 +29,9 @@ export async function generateMetadata({
 
   const url = `${SITE}/article/${article.id}`;
   const description = article.summary?.slice(0, 160) ?? article.title;
-  const image = article.image_url || "/og-image.png";
+  const images = article.image_url
+    ? [{ url: article.image_url, width: 1200, height: 630 }]
+    : [{ url: `${SITE}/og-image.png`, width: 1200, height: 630 }];
 
   return {
     title: article.title,
@@ -41,7 +44,7 @@ export async function generateMetadata({
       type: "article",
       publishedTime: article.published_at ?? article.created_at,
       url,
-      images: [{ url: image, width: 1200, height: 630 }],
+      images,
     },
   };
 }
@@ -55,6 +58,9 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   const language = article.language === "fr" ? "fr" : "en";
   const url = `${SITE}/article/${article.id}`;
   const published = article.published_at ?? article.created_at;
+  const categoryName = categoryLabel(article.category as CategoryId, language);
+
+  const related = await getRelatedArticles(article.category, article.id, 4);
 
   // Server-rendered once per revalidation, so a fixed UTC locale format is
   // deterministic — no client hydration to diverge from.
@@ -66,6 +72,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   const t = {
     back: "GlobeVortex",
     readMore: language === "fr" ? "Lire l'article complet" : "Read full article",
+    more: language === "fr" ? `Plus en ${categoryName}` : `More ${categoryName}`,
   };
 
   const jsonLd = {
@@ -99,6 +106,27 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       width: 1200,
       height: 630,
     },
+    // Honest aggregation signal: this page is based on the original source
+    // article, which Google can use to deduplicate against the publisher.
+    isBasedOn: {
+      "@type": "WebPage",
+      url: article.url,
+      name: article.title,
+      publisher: {
+        "@type": "Organization",
+        name: article.source || "Unknown",
+      },
+    },
+  };
+
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "GlobeVortex", item: SITE },
+      { "@type": "ListItem", position: 2, name: categoryName, item: SITE },
+      { "@type": "ListItem", position: 3, name: article.title },
+    ],
   };
 
   return (
@@ -106,6 +134,10 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
       />
 
       <article className="mx-auto max-w-3xl px-4 py-8">
@@ -118,9 +150,22 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
         <div className="mt-6">
           <span className="inline-block rounded-full border border-[#C9A84C] px-3 py-0.5 text-xs font-semibold uppercase tracking-wider text-[#C9A84C]">
-            {categoryLabel(article.category as CategoryId, language)}
+            {categoryName}
           </span>
         </div>
+
+        {article.image_url && (
+          <div className="relative mb-6 mt-4 aspect-video w-full max-w-3xl overflow-hidden rounded-lg">
+            <Image
+              src={article.image_url}
+              alt={article.title}
+              fill
+              sizes="(max-width: 768px) 100vw, 768px"
+              className="object-cover"
+              priority
+            />
+          </div>
+        )}
 
         <h1 className="mt-4 font-display text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl">
           {article.title}
@@ -146,6 +191,39 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         >
           {t.readMore} <span aria-hidden>→</span>
         </a>
+
+        {related.length > 0 && (
+          <section className="mt-12 border-t border-white/10 pt-8">
+            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[#C9A84C]">
+              {t.more}
+            </h2>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {related.map((item) => (
+                <Link
+                  key={item.id}
+                  href={`/article/${item.id}`}
+                  className="group rounded-lg border border-white/10 bg-white/[0.02] p-4 transition-colors hover:border-[#C9A84C]"
+                >
+                  {item.image_url && (
+                    <div className="relative mb-3 aspect-video w-full overflow-hidden rounded">
+                      <Image
+                        src={item.image_url}
+                        alt={item.title}
+                        fill
+                        sizes="(max-width: 640px) 100vw, 50vw"
+                        className="object-cover"
+                      />
+                    </div>
+                  )}
+                  <h3 className="line-clamp-2 text-sm font-medium text-white">
+                    {item.title}
+                  </h3>
+                  <p className="mt-1 text-xs text-gray-400">{item.source}</p>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
       </article>
     </main>
   );
