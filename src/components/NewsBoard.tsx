@@ -67,6 +67,7 @@ export default function NewsBoard({ articles, topStories = [], error }: NewsBoar
   // Switching category or language invalidates the current page's slice.
   useEffect(() => {
     setCurrentPage(1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, [categoryId, language]);
 
   const paginatedArticles = visibleArticles.slice(
