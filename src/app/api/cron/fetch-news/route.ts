@@ -49,28 +49,38 @@ function extractJson(text: string): unknown {
   return JSON.parse(match ? match[0] : text);
 }
 
-// Asks Haiku for a category + 2-sentence summary in the article's language.
+// Only articles published within this window are worth a Haiku call; older ones
+// are unlikely to surface as top news, so we skip the model and save the cost.
+const RECENCY_WINDOW_MS = 2 * 60 * 60 * 1000; // 2 hours
+
+// Single Haiku call returning category + 2-sentence summary + 0-100 importance
+// score in one JSON response (merged from what used to be two sequential calls).
 // Falls back to keyword classification + the raw RSS description on any failure
 // so a flaky model call never drops an article entirely (counted as an error).
-async function classifyAndSummarize(article: Article): Promise<{ result: Classification; failed: boolean }> {
+async function processArticleWithHaiku(article: Article): Promise<Processed> {
   const languageName = article.language === "fr" ? "French" : "English";
   try {
     const message = await anthropic.messages.create({
       model: SUMMARY_MODEL,
-      max_tokens: 220,
+      max_tokens: 260,
       stream: false,
       messages: [
         {
           role: "user",
-          content: `You classify and summarize a news article for a bilingual news site.
+          content: `You classify, summarize, and rate a news article for a bilingual news site.
 Choose exactly one category from this list: world, politics, economy, science, climate, conflicts, health, culture, sports, fifa.
 Write a concise 2-sentence summary in ${languageName} (the article's own language).
+Rate the article's global importance on a 0-100 scale:
+90-100 = global breaking news (war, major crisis, world leader event).
+75-89 = major national politics or economy.
+50-74 = notable regional, tech, or science story.
+0-49 = routine or local news.
 
 Title: ${article.title}
 Description: ${article.description}
 
 Respond with ONLY a JSON object, no markdown formatting:
-{"category": "<one allowed category>", "summary": "<2 sentences in ${languageName}>"}`,
+{"category": "<one allowed category>", "summary": "<2 sentences in ${languageName}>", "score": <integer 0-100>}`,
         },
       ],
     });
@@ -78,7 +88,7 @@ Respond with ONLY a JSON object, no markdown formatting:
     const textBlock = message.content.find((b) => b.type === "text");
     if (!textBlock || textBlock.type !== "text") throw new Error("No text content from Claude");
 
-    const parsed = extractJson(textBlock.text) as Partial<Classification>;
+    const parsed = extractJson(textBlock.text) as Partial<Classification> & { score?: unknown };
     const category = (parsed.category && VALID_CATEGORIES.has(parsed.category)
       ? parsed.category
       : inferCategory(article.title, article.description)) as ArticleCategory;
@@ -86,67 +96,45 @@ Respond with ONLY a JSON object, no markdown formatting:
       typeof parsed.summary === "string" && parsed.summary.trim()
         ? parsed.summary.trim()
         : article.description;
+    const rawScore = typeof parsed.score === "number" ? parsed.score : Number(parsed.score);
+    const importanceScore = Number.isFinite(rawScore)
+      ? Math.max(0, Math.min(100, Math.round(rawScore)))
+      : 0;
 
-    return { result: { category, summary }, failed: false };
+    return { classification: { category, summary }, importanceScore, failed: false };
   } catch (error) {
     console.error(`[cron/fetch-news] Haiku failed for "${article.url}":`, error);
     return {
-      result: {
+      classification: {
         category: inferCategory(article.title, article.description),
         summary: article.description,
       },
+      importanceScore: 0,
       failed: true,
     };
   }
 }
 
-// Asks Haiku for a 0-100 global-importance rating of an article. The summary
-// (Haiku-written, or the RSS fallback) gives better signal than the raw feed
-// description. Returns 0 on any failure so a flaky call never blocks ingestion.
-async function scoreImportance(title: string, summary: string): Promise<number> {
-  try {
-    const message = await anthropic.messages.create({
-      model: SUMMARY_MODEL,
-      max_tokens: 30,
-      stream: false,
-      messages: [
-        {
-          role: "user",
-          content: `Rate the global importance of this news article on a 0-100 scale.
-90-100 = global breaking news (war, major crisis, world leader event).
-75-89 = major national politics or economy.
-50-74 = notable regional, tech, or science story.
-0-49 = routine or local news.
-
-Title: ${title}
-Summary: ${summary}
-
-Respond with ONLY a JSON object, no markdown formatting:
-{"score": <integer 0-100>}`,
-        },
-      ],
-    });
-
-    const textBlock = message.content.find((b) => b.type === "text");
-    if (!textBlock || textBlock.type !== "text") throw new Error("No text content from Claude");
-
-    const parsed = extractJson(textBlock.text) as { score?: unknown };
-    const raw = typeof parsed.score === "number" ? parsed.score : Number(parsed.score);
-    if (!Number.isFinite(raw)) throw new Error(`Non-numeric score: ${String(parsed.score)}`);
-    return Math.max(0, Math.min(100, Math.round(raw)));
-  } catch (error) {
-    console.error(`[cron/fetch-news] Importance scoring failed for "${title}":`, error);
-    return 0;
-  }
-}
-
-// Full per-article pipeline: classify + summarize, then score importance off the
-// resulting summary. Two sequential Haiku calls per article; the outer mapPool
-// bounds how many run at once.
+// Full per-article pipeline. Recent articles (published within RECENCY_WINDOW_MS)
+// get a single Haiku call for category + summary + importance score. Older
+// articles skip Haiku entirely — keyword classification, no importance score, and
+// the raw RSS description — so the cron only spends model budget on fresh news.
 async function processArticle(article: Article): Promise<Processed> {
-  const { result, failed } = await classifyAndSummarize(article);
-  const importanceScore = await scoreImportance(article.title, result.summary);
-  return { classification: result, importanceScore, failed };
+  const publishedMs = new Date(article.publishedAt).getTime();
+  const isRecent = Number.isFinite(publishedMs) && Date.now() - publishedMs < RECENCY_WINDOW_MS;
+
+  if (!isRecent) {
+    return {
+      classification: {
+        category: inferCategory(article.title, article.description),
+        summary: article.description,
+      },
+      importanceScore: 0,
+      failed: false,
+    };
+  }
+
+  return processArticleWithHaiku(article);
 }
 
 // Loads every stored URL into a Set for O(1) dedup. Pages through the table
