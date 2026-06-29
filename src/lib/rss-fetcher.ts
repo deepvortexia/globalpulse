@@ -4,6 +4,24 @@ import type { Article, CategoryId, RSSSource } from "@/types";
 
 type ArticleCategory = Exclude<CategoryId, "all" | "top">;
 
+function decodeHtmlEntities(text: string): string {
+  if (!text) return text;
+  return text
+    .replace(/&#8217;/g, "’")
+    .replace(/&#8216;/g, "‘")
+    .replace(/&#39;/g, "'")
+    .replace(/&#8220;/g, "“")
+    .replace(/&#8221;/g, "”")
+    .replace(/&#8211;/g, "–")
+    .replace(/&#8212;/g, "—")
+    .replace(/&#038;/g, "&")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)));
+}
+
 // Keyword-based classification run on every article's title + description. The
 // first matching topic wins; anything unmatched falls back to "world". This
 // overrides each source's static category, so a single feed can spread across
@@ -94,8 +112,8 @@ function toArticle(item: FeedItem, source: RSSSource): Article | null {
   const publishedTime = new Date(rawDate).getTime();
   if (Number.isNaN(publishedTime)) return null;
 
-  const title = item.title.trim();
-  const description = (item.contentSnippet ?? item.content ?? "").trim();
+  const title = decodeHtmlEntities(item.title.trim());
+  const description = decodeHtmlEntities((item.contentSnippet ?? item.content ?? "").trim());
 
   return {
     id: makeId(item.link),
