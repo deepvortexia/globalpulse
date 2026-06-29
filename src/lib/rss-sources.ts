@@ -140,31 +140,27 @@ export const RSS_SOURCES: RSSSource[] = [
 
   // ── French & International expansion ──
 
-  // Québec / Canada FR
-  { name: "TVA Nouvelles", url: "https://www.tvanouvelles.ca/rss", language: "fr", category: "world", country: "CA" },
-  { name: "Le Devoir", url: "https://www.ledevoir.com/rss/manchettes.xml", language: "fr", category: "world", country: "CA" },
-  { name: "Journal de Montréal", url: "https://www.journaldemontreal.com/rss-feed", language: "fr", category: "world", country: "CA" },
-  { name: "Radio-Canada Politique", url: "https://ici.radio-canada.ca/rss/4201", language: "fr", category: "politics", country: "CA" },
-  { name: "Radio-Canada Sports", url: "https://ici.radio-canada.ca/rss/7/sports", language: "fr", category: "sports", country: "CA" },
-  { name: "Radio-Canada Sciences", url: "https://ici.radio-canada.ca/rss/4319", language: "fr", category: "science", country: "CA" },
+  // Québec / Canada FR — Google News (replaces 403 direct feeds)
+  { name: "Google News — Québec", url: "https://news.google.com/rss/search?q=québec&hl=fr&gl=CA&ceid=CA:fr", language: "fr", category: "world", country: "CA" },
+  { name: "Google News — Canada FR", url: "https://news.google.com/rss/search?q=canada+actualités&hl=fr&gl=CA&ceid=CA:fr", language: "fr", category: "world", country: "CA" },
+  { name: "Google News — Politique QC", url: "https://news.google.com/rss/search?q=politique+québec+canada&hl=fr&gl=CA&ceid=CA:fr", language: "fr", category: "politics", country: "CA" },
+  { name: "Google News — Sports QC", url: "https://news.google.com/rss/search?q=sports+québec+hockey&hl=fr&gl=CA&ceid=CA:fr", language: "fr", category: "sports", country: "CA" },
 
-  // France spécialisé
+  // France spécialisé — working direct feeds kept, 403s replaced with Google News
   { name: "Le Monde Politique", url: "https://www.lemonde.fr/politique/rss_full.xml", language: "fr", category: "politics", country: "FR" },
   { name: "Le Monde Économie", url: "https://www.lemonde.fr/economie/rss_full.xml", language: "fr", category: "economy", country: "FR" },
   { name: "Le Monde Culture", url: "https://www.lemonde.fr/culture/rss_full.xml", language: "fr", category: "culture", country: "FR" },
   { name: "Le Figaro Politique", url: "https://www.lefigaro.fr/rss/figaro_politique.xml", language: "fr", category: "politics", country: "FR" },
   { name: "Le Figaro Économie", url: "https://www.lefigaro.fr/rss/figaro_economie.xml", language: "fr", category: "economy", country: "FR" },
   { name: "Le Figaro Sport", url: "https://www.lefigaro.fr/rss/figaro_sport.xml", language: "fr", category: "sports", country: "FR" },
-  { name: "BFM TV", url: "https://www.bfmtv.com/rss/news-feed/", language: "fr", category: "world", country: "FR" },
-  { name: "L'Obs", url: "https://www.nouvelobs.com/rss.xml", language: "fr", category: "world", country: "FR" },
   { name: "Courrier International", url: "https://www.courrierinternational.com/feed/all/rss.xml", language: "fr", category: "world", country: "FR" },
   { name: "France Info Sport", url: "https://www.francetvinfo.fr/sports.rss", language: "fr", category: "sports", country: "FR" },
   { name: "France Info Économie", url: "https://www.francetvinfo.fr/economie.rss", language: "fr", category: "economy", country: "FR" },
   { name: "France Info Santé", url: "https://www.francetvinfo.fr/sante.rss", language: "fr", category: "health", country: "FR" },
   { name: "France Info Science", url: "https://www.francetvinfo.fr/sciences.rss", language: "fr", category: "science", country: "FR" },
-  { name: "RFI Afrique", url: "https://www.rfi.fr/fr/afrique/rss", language: "fr", category: "world", country: "FR" },
   { name: "RFI Économie", url: "https://www.rfi.fr/fr/economie/rss", language: "fr", category: "economy", country: "FR" },
-  { name: "TV5 Monde", url: "https://information.tv5monde.com/rss.xml", language: "fr", category: "world", country: "FR" },
-  { name: "Le Point", url: "https://www.lepoint.fr/rss.xml", language: "fr", category: "world", country: "FR" },
-  { name: "Mediapart", url: "https://www.mediapart.fr/articles/feed", language: "fr", category: "politics", country: "FR" },
+  { name: "Google News — France Politique", url: "https://news.google.com/rss/search?q=politique+france&hl=fr&gl=FR&ceid=FR:fr", language: "fr", category: "politics", country: "FR" },
+  { name: "Google News — France Économie", url: "https://news.google.com/rss/search?q=économie+france&hl=fr&gl=FR&ceid=FR:fr", language: "fr", category: "economy", country: "FR" },
+  { name: "Google News — France Sport", url: "https://news.google.com/rss/search?q=sport+france&hl=fr&gl=FR&ceid=FR:fr", language: "fr", category: "sports", country: "FR" },
+  { name: "Google News — Afrique FR", url: "https://news.google.com/rss/search?q=afrique+actualités&hl=fr&gl=FR&ceid=FR:fr", language: "fr", category: "world", country: "FR" },
 ];
