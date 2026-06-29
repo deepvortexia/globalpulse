@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CategoryId, Language } from "@/types";
 import { CATEGORIES, categoryLabel } from "@/lib/categories";
 
@@ -25,12 +25,20 @@ export default function CategoryNav({
   menuOpen,
   onMenuClose,
 }: CategoryNavProps) {
+  const scrollRowRef = useRef<HTMLDivElement>(null);
+
   // Keep the active pill in view when it's selected via a route/state change
   // rather than a direct click (e.g. programmatic nav), so it isn't left
   // scrolled out of frame behind the clipped edge.
   useEffect(() => {
+    if (activeId === "top") {
+      // First pill — always reset to the leftmost position so it's never
+      // partially clipped by the scroll container's left edge.
+      scrollRowRef.current?.scrollTo({ left: 0, behavior: "smooth" });
+      return;
+    }
     const el = document.querySelector(`[data-category="${activeId}"]`);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
   }, [activeId]);
 
   // ── Mobile drawer: keep mounted through the slide-out animation ────────
@@ -70,6 +78,7 @@ export default function CategoryNav({
       >
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
           <div
+            ref={scrollRowRef}
             className="no-scrollbar relative flex gap-1 overflow-x-auto py-2.5 pr-16"
             style={{ scrollPaddingRight: "64px" }}
           >
