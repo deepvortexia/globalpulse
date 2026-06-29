@@ -79,7 +79,7 @@ export default function CategoryNav({
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
           <div
             ref={scrollRowRef}
-            className="no-scrollbar relative flex gap-1 overflow-x-auto py-2.5 pr-16"
+            className="no-scrollbar relative flex gap-0.5 overflow-x-auto py-2.5 pr-16"
             style={{ scrollPaddingRight: "64px" }}
           >
             {CATEGORIES.filter((cat) => cat.id !== "fifa").map((cat) => {
@@ -94,7 +94,7 @@ export default function CategoryNav({
                   data-category={cat.id}
                   onClick={() => onChange(cat.id)}
                   aria-pressed={active}
-                  className={`flex flex-shrink-0 items-center gap-1.5 rounded-full border border-transparent px-3.5 py-1.5 text-xs transition-all ${
+                  className={`flex flex-shrink-0 items-center gap-1.5 rounded-full border border-transparent px-3 py-1.5 text-xs transition-all ${
                     isTop
                       ? `bg-[#DC2626] font-bold text-white hover:bg-[#b91c1c] ${
                           active ? "shadow-[0_0_12px_rgba(220,38,38,0.5)] ring-2 ring-white/40" : ""
@@ -129,7 +129,7 @@ export default function CategoryNav({
             className="pointer-events-none absolute inset-y-0 right-4 w-20 sm:right-6"
             style={{
               background:
-                "linear-gradient(to left, #0a0a0f 0%, rgba(10,10,15,0.85) 45%, rgba(201,168,76,0.12) 75%, transparent 100%)",
+                "linear-gradient(to left, #0a0a0f 0%, rgba(10,10,15,0.85) 60%, transparent 100%)",
             }}
           />
         </div>
