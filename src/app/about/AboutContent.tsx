@@ -112,7 +112,7 @@ const COPY: Record<Language, Copy> = {
     creator: {
       heading: "The Creator",
       body: [
-        "GlobeVortex is built by Yannick Boisclair under the DeepVortex brand — an independent studio crafting AI-first products that make information faster and clearer for everyone.",
+        "GlobeVortex is created by Yannick Boisclair under the DeepVortex brand — an independent studio crafting AI-first products that make information faster and clearer for everyone.",
         "It is one expression of a simple idea: that artificial intelligence, used thoughtfully, can give anyone a clearer window on the world — regardless of language or location.",
       ],
     },
@@ -186,7 +186,7 @@ const COPY: Record<Language, Copy> = {
     creator: {
       heading: "Le créateur",
       body: [
-        "GlobeVortex est construit par Yannick Boisclair sous la marque DeepVortex — un studio indépendant créant des produits IA-first qui rendent l'information plus rapide et plus claire pour tous.",
+        "GlobeVortex est créé par Yannick Boisclair sous la marque DeepVortex — un studio indépendant créant des produits IA-first qui rendent l'information plus rapide et plus claire pour tous.",
         "C'est l'expression d'une idée simple : que l'intelligence artificielle, utilisée avec discernement, peut offrir à n'importe qui une fenêtre plus claire sur le monde — quelle que soit sa langue ou sa localisation.",
       ],
     },
