@@ -76,11 +76,10 @@ export default function CategoryNav({
         aria-label="Categories"
         className="hidden border-b border-gv-border bg-gv-bg/60 backdrop-blur-md sm:block"
       >
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 flex justify-center">
           <div
             ref={scrollRowRef}
-            className="no-scrollbar relative flex gap-0.5 overflow-x-auto py-2.5 pr-16"
-            style={{ scrollPaddingRight: "64px" }}
+            className="no-scrollbar relative flex items-center justify-center gap-1 overflow-x-auto py-2.5 px-2"
           >
             {CATEGORIES.filter((cat) => cat.id !== "fifa").map((cat) => {
               const active = cat.id === activeId;
@@ -119,19 +118,6 @@ export default function CategoryNav({
             })}
           </div>
 
-          {/* Right-edge gold fade: signals there are more pills (e.g. Sports)
-              to scroll to. Fades content into the background with a gold tint
-              to match the nav aesthetic. Sits outside the scroll container so
-              it stays pinned, and is pointer-events-none so a partially-faded
-              pill stays clickable. */}
-          <span
-            aria-hidden
-            className="pointer-events-none absolute inset-y-0 right-4 w-20 sm:right-6"
-            style={{
-              background:
-                "linear-gradient(to left, #0a0a0f 0%, rgba(10,10,15,0.85) 60%, transparent 100%)",
-            }}
-          />
         </div>
       </nav>
 
