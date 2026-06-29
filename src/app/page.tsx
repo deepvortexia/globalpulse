@@ -1,6 +1,23 @@
+import type { Metadata } from "next";
 import { getArticles, getTopStories } from "@/lib/articles";
 import type { Article } from "@/types";
 import NewsBoard from "@/components/NewsBoard";
+
+export const metadata: Metadata = {
+  title: "GlobeVortex — Live World News · AI-Powered Bilingual Aggregator",
+  description:
+    "Follow the world's most important stories live — AI-curated international news in English and French from 50+ trusted global sources including BBC, Le Monde, CNN, Al Jazeera, Radio-Canada, RFI and more.",
+  alternates: {
+    canonical: "https://globevortex.com",
+  },
+  openGraph: {
+    url: "https://globevortex.com",
+    title: "GlobeVortex — Live World News",
+    description:
+      "AI-curated international news in English and French from 50+ trusted global sources.",
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "GlobeVortex" }],
+  },
+};
 
 // ISR: HTML is server-rendered with data baked in and revalidated every 60s.
 // Articles are read from Supabase (populated by the /api/cron/fetch-news

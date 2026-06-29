@@ -21,8 +21,31 @@ const playfairDisplay = Playfair_Display({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://globevortex.com"),
-  title: "GlobeVortex — Live World News",
-  description: "Premium live world news from trusted sources, in English and French.",
+  title: {
+    default: "GlobeVortex — Live World News · AI-Powered Bilingual Aggregator",
+    template: "%s | GlobeVortex",
+  },
+  description:
+    "GlobeVortex aggregates live international news from 50+ trusted sources worldwide, summarized in English and French by Claude AI. World affairs, politics, economy, science, climate, health, culture and sports.",
+  keywords: [
+    "world news",
+    "international news",
+    "bilingual news",
+    "AI news aggregator",
+    "actualités mondiales",
+    "actualités internationales",
+    "agrégateur nouvelles IA",
+    "nouvelles bilingues",
+    "nouvelles en français",
+    "Claude AI news",
+    "live news",
+    "top stories",
+    "breaking news",
+    "GlobeVortex",
+  ],
+  authors: [{ name: "Yannick Boisclair", url: "https://globevortex.com/about" }],
+  creator: "Yannick Boisclair",
+  publisher: "GlobeVortex — DeepVortex",
   icons: {
     icon: [
       { url: "/favicon.ico" },
@@ -31,6 +54,39 @@ export const metadata: Metadata = {
     apple: "/apple-touch-icon.png",
   },
   manifest: "/site.webmanifest",
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    alternateLocale: "fr_CA",
+    url: "https://globevortex.com",
+    siteName: "GlobeVortex",
+    title: "GlobeVortex — Live World News · AI-Powered Bilingual Aggregator",
+    description:
+      "Live international news from 50+ sources, summarized in EN & FR by Claude AI.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "GlobeVortex — Live World News",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "GlobeVortex — Live World News",
+    description:
+      "Live international news from 50+ sources, summarized in EN & FR by Claude AI.",
+    images: ["/og-image.png"],
+    creator: "@globevortex",
+  },
+  alternates: {
+    canonical: "https://globevortex.com",
+    languages: {
+      en: "https://globevortex.com",
+      fr: "https://globevortex.com",
+    },
+  },
   robots: {
     index: false,
     follow: false,
