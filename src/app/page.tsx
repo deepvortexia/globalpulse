@@ -35,5 +35,47 @@ export default async function Home() {
     error = e instanceof Error ? e.message : "Failed to load news";
   }
 
-  return <NewsBoard articles={articles} topStories={topStories} error={error} />;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://globevortex.com/#website",
+        "url": "https://globevortex.com",
+        "name": "GlobeVortex",
+        "description": "Bilingual FR/EN AI-powered international news aggregator — world news summarized by Claude AI from 50+ trusted sources.",
+        "inLanguage": ["en", "fr"],
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://globevortex.com/?q={search_term_string}",
+          "query-input": "required name=search_term_string",
+        },
+      },
+      {
+        "@type": "NewsMediaOrganization",
+        "@id": "https://globevortex.com/#organization",
+        "name": "GlobeVortex",
+        "url": "https://globevortex.com",
+        "logo": "https://globevortex.com/logo.png",
+        "foundingDate": "2026",
+        "founder": {
+          "@type": "Person",
+          "name": "Yannick Boisclair",
+        },
+        "description":
+          "AI-powered bilingual news aggregator covering world affairs, politics, economy, science, climate, health, culture and sports.",
+        "publishingPrinciples": "https://globevortex.com/about",
+      },
+    ],
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <NewsBoard articles={articles} topStories={topStories} error={error} />
+    </>
+  );
 }
