@@ -8,7 +8,16 @@ interface FooterProps {
 
 const footerText: Record<
   Language,
-  { tagline: string; rights: string; soon: string; contact: string; about: string; credit: string }
+  {
+    tagline: string;
+    rights: string;
+    soon: string;
+    contact: string;
+    about: string;
+    privacy: string;
+    terms: string;
+    credit: string;
+  }
 > = {
   en: {
     tagline: "World news powered by AI",
@@ -16,6 +25,8 @@ const footerText: Record<
     soon: "Coming soon",
     contact: "Contact",
     about: "About",
+    privacy: "Privacy Policy",
+    terms: "Terms",
     credit: "Created by Yannick Boisclair · Powered by Claude (Anthropic)",
   },
   fr: {
@@ -24,6 +35,8 @@ const footerText: Record<
     soon: "Prochainement",
     contact: "Contact",
     about: "À propos",
+    privacy: "Politique de confidentialité",
+    terms: "Conditions",
     credit: "Créé par Yannick Boisclair · Propulsé par Claude (Anthropic)",
   },
 };
@@ -57,13 +70,21 @@ export default function Footer({ language }: FooterProps) {
           <p className="text-sm text-gv-muted">{text.tagline}</p>
         </div>
 
-        {/* Links row — placeholder pages, not yet live */}
-        <div className="flex items-center gap-4 text-sm text-gv-muted">
+        {/* Links row */}
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm text-gv-muted">
           <a href="mailto:admin@globevortex.com" className="transition-colors hover:text-gv-gold">
             {text.contact}
           </a>
           <Link href="/about" className="transition-colors hover:text-gv-gold">
             {text.about}
+          </Link>
+          <span aria-hidden className="text-xs opacity-50">·</span>
+          <Link href="/privacy" className="text-xs transition-colors hover:text-gv-gold">
+            {text.privacy}
+          </Link>
+          <span aria-hidden className="text-xs opacity-50">·</span>
+          <Link href="/terms" className="text-xs transition-colors hover:text-gv-gold">
+            {text.terms}
           </Link>
         </div>
 
