@@ -161,6 +161,34 @@ export async function getTopStories({
   return deduped.slice(0, TOP_STORIES_TARGET).map(rowToArticle);
 }
 
+// Fetches a single article by its id (the public slug). Returns the raw DB row
+// (snake_case) so the article page and its NewsArticle JSON-LD can read
+// published_at / created_at / source directly. Null when not found — including
+// when `slug` isn't a valid UUID, which makes Postgres reject the filter.
+export async function getArticleBySlug(slug: string): Promise<DbArticleRow | null> {
+  const { data, error } = await getServiceRoleClient()
+    .from("articles")
+    .select("*")
+    .eq("id", slug)
+    .single();
+  if (error || !data) return null;
+  return data as DbArticleRow;
+}
+
+// Lightweight id + timestamp list for the dynamic sitemap. Newest first, capped
+// at 1000 to stay within Google's 50k-URL / 50MB per-file sitemap budget.
+export async function getArticleIdsForSitemap(): Promise<
+  Pick<DbArticleRow, "id" | "created_at">[]
+> {
+  const { data, error } = await getServiceRoleClient()
+    .from("articles")
+    .select("id, created_at")
+    .order("created_at", { ascending: false })
+    .limit(1000);
+  if (error || !data) return [];
+  return data as Pick<DbArticleRow, "id" | "created_at">[];
+}
+
 export async function searchArticles({
   query,
   language,

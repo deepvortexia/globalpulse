@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { enUS, fr } from "date-fns/locale";
 import type { Article, Language } from "@/types";
@@ -79,11 +80,9 @@ function NewsCard({ article, language, featured = false }: NewsCardProps) {
   const rotateY = tiltActive ? tilt.rotateY : 0;
 
   return (
-    <a
+    <Link
       ref={cardRef}
-      href={article.url}
-      target="_blank"
-      rel="noopener noreferrer"
+      href={`/article/${article.id}`}
       onMouseMove={canHover ? handleMouseMove : undefined}
       onMouseLeave={canHover ? handleMouseLeave : undefined}
       style={{
@@ -123,7 +122,7 @@ function NewsCard({ article, language, featured = false }: NewsCardProps) {
           </>
         )}
       </div>
-    </a>
+    </Link>
   );
 }
 
