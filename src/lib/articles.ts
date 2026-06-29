@@ -21,9 +21,12 @@ export interface DbArticleRow {
 
 const DEFAULT_PAGE_SIZE = 24;
 const DEFAULT_SINCE_HOURS = 24;
-// Top Stories: only genuinely high-importance items, recent, capped.
-const TOP_STORIES_MIN_SCORE = 85;
-const TOP_STORIES_LIMIT = 20;
+const TOP_STORIES_MIN_SCORE = 75;
+const TOP_STORIES_TARGET = 10;
+const TOP_STORIES_FALLBACK_CATEGORIES: ReadonlyArray<ArticleCategory> = [
+  "world", "politics", "economy", "science", "climate",
+  "conflicts", "health", "culture", "sports",
+];
 
 type ArticleCategory = Exclude<CategoryId, "all" | "top">;
 
@@ -93,24 +96,77 @@ export async function getArticles({
   return (data as DbArticleRow[]).map(rowToArticle);
 }
 
-// Reads the highest-importance recent articles for the Top Stories rail. Filters
-// to importance_score >= 85 within the last `sinceHours` (default 24h), ordered
-// most important first, capped at 20. Server-side only (service-role client),
-// mirroring getArticles. Importance scores are written by the fetch-news cron.
+// Reads the highest-importance recent articles for the Top Stories rail.
+// Hybrid strategy: always returns at least TARGET articles.
+//   Step 1 — articles with importance_score >= 75 in last 24h, best 30.
+//   Step 2 — if >= 10, return top 10. Done.
+//   Step 3 — if < 10, fill gaps by fetching the best article per missing
+//             category from the last 48h, skipping URLs already seen.
+//   Step 4 — merge, deduplicate by URL, sort by score, return first 10.
 export async function getTopStories({
   sinceHours = DEFAULT_SINCE_HOURS,
 }: { sinceHours?: number } = {}): Promise<Article[]> {
-  const since = new Date(Date.now() - sinceHours * 60 * 60 * 1000).toISOString();
+  const db = getServiceRoleClient();
+  const since24h = new Date(Date.now() - sinceHours * 60 * 60 * 1000).toISOString();
 
-  const { data, error } = await getServiceRoleClient()
+  // Step 1
+  const { data: primary, error: primaryError } = await db
     .from("articles")
     .select("*")
-    .gte("created_at", since)
+    .gte("created_at", since24h)
     .gte("importance_score", TOP_STORIES_MIN_SCORE)
     .order("importance_score", { ascending: false })
-    .limit(TOP_STORIES_LIMIT);
+    .limit(30);
 
-  if (error) throw new Error(`Supabase top-stories read failed: ${error.message}`);
+  if (primaryError) throw new Error(`Supabase top-stories read failed: ${primaryError.message}`);
 
-  return (data as DbArticleRow[]).map(rowToArticle);
+  const primaryRows = primary as DbArticleRow[];
+
+  // Step 2 — enough high-score articles
+  if (primaryRows.length >= TOP_STORIES_TARGET) {
+    return primaryRows.slice(0, TOP_STORIES_TARGET).map(rowToArticle);
+  }
+
+  // Step 3 — fill missing categories from the last 48h
+  const coveredCategories = new Set(primaryRows.map((r) => r.category));
+  const seenUrls = new Set(primaryRows.map((r) => r.url));
+  const missingCategories = TOP_STORIES_FALLBACK_CATEGORIES.filter(
+    (cat) => !coveredCategories.has(cat),
+  );
+
+  const since48h = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+  const fallbackRows: DbArticleRow[] = [];
+
+  await Promise.all(
+    missingCategories.map(async (cat) => {
+      const { data, error } = await db
+        .from("articles")
+        .select("*")
+        .gte("created_at", since48h)
+        .eq("category", cat)
+        .order("importance_score", { ascending: false })
+        .limit(5);
+
+      if (error || !data) return;
+
+      const best = (data as DbArticleRow[]).find((r) => !seenUrls.has(r.url));
+      if (best) {
+        seenUrls.add(best.url);
+        fallbackRows.push(best);
+      }
+    }),
+  );
+
+  // Step 4 — merge, deduplicate, sort, cap
+  const merged = [...primaryRows, ...fallbackRows];
+  merged.sort((a, b) => (b.importance_score ?? 0) - (a.importance_score ?? 0));
+
+  const seen = new Set<string>();
+  const deduped = merged.filter((r) => {
+    if (seen.has(r.url)) return false;
+    seen.add(r.url);
+    return true;
+  });
+
+  return deduped.slice(0, TOP_STORIES_TARGET).map(rowToArticle);
 }
