@@ -195,6 +195,20 @@ export default function CategoryNav({
                   </button>
                 );
               })}
+
+              {/* FIFA 2026 — mobile drawer only; hidden from desktop pills */}
+              <button
+                type="button"
+                onClick={() => {
+                  onChange("fifa");
+                  onMenuClose();
+                }}
+                aria-pressed={activeId === "fifa"}
+                className="flex min-h-[44px] w-full items-center gap-3 border-l-2 border-[#DC2626] bg-[#DC2626]/10 px-4 py-3 text-left text-sm font-bold text-[#DC2626] transition-colors hover:bg-[#DC2626]/20"
+              >
+                <span className="inline-block h-2 w-2 rounded-full bg-[#DC2626] animate-pulse" />
+                <span className="flex-1">⚽ FIFA 2026</span>
+              </button>
             </nav>
           </div>
         </div>

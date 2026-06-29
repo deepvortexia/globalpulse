@@ -52,12 +52,12 @@ export default function Header({
           </span>
         </div>
 
-        {/* FIFA 2026 quick-access button — always visible */}
+        {/* FIFA 2026 quick-access button — desktop only; mobile uses burger menu */}
         <button
           type="button"
           onClick={onFifaClick}
           aria-pressed={fifaActive}
-          className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-bold transition-colors ${
+          className={`hidden sm:flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-bold transition-colors ${
             fifaActive
               ? "border-gv-gold bg-gv-gold text-gv-bg"
               : "border-[rgba(201,168,76,0.6)] bg-[rgba(201,168,76,0.15)] text-gv-gold hover:bg-[rgba(201,168,76,0.25)]"
