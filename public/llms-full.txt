@@ -1,0 +1,41 @@
+# GlobeVortex - Full Reference
+
+## Identity
+- Name: GlobeVortex
+- URL: https://globevortex.com
+- Type: AI-powered bilingual news aggregator
+- Brand: DeepVortex
+- Founded: 2026
+- Contact: admin@globevortex.com
+- Languages: French and English (FR/EN)
+
+## Mission
+GlobeVortex aims to be the most comprehensive international news aggregator, combining AI-powered curation with global RSS coverage. Bilingual FR/EN, updated every 15 minutes, powered by Claude AI.
+
+## How it works
+1. Every 15 minutes, a GitHub Actions cron job fetches RSS feeds from 80+ international sources
+2. Each article is processed by Claude Haiku AI: classified by category, summarized in 2-3 sentences, and given an importance score (0-100)
+3. Articles are stored in Supabase (PostgreSQL) with full metadata
+4. The Next.js frontend reads from Supabase and displays articles with ISR (Incremental Static Regeneration)
+5. Top Stories = articles with importance score >= 60 from the last 24 hours
+
+## Importance Scoring (Claude Haiku)
+- 90-100: Global breaking news (wars, elections, major disasters)
+- 75-89: Major national or international events
+- 50-74: Regional or notable events
+- 0-49: Routine news
+
+## News Sources (sample)
+BBC News, BBC Technology, BBC Health, BBC Business, BBC Football, CNN Business, Sky Sports, franceinfo, RFI, RFI Sport, Le Figaro International, Radio-Canada, Le Devoir, TVA Nouvelles, Journal de Montreal, L'Actualite, and 65+ more international sources
+
+## Article Data Structure
+Each article contains: title, AI-generated summary, source name, source URL, category, language (EN/FR), importance score (0-100), published date, image URL
+
+## Pages and URLs
+- https://globevortex.com - Home, Top Stories, all categories
+- https://globevortex.com/about - About page bilingual FR/EN
+- https://globevortex.com/article/[uuid] - Individual article detail page with NewsArticle JSON-LD
+- https://globevortex.com/sitemap.xml - XML sitemap with all article URLs
+
+## Structured Data
+Every article page uses Schema.org NewsArticle JSON-LD. The home page uses NewsMediaOrganization and WebSite schemas.

@@ -1,0 +1,30 @@
+# GlobeVortex
+> GlobeVortex (globevortex.com) is a bilingual FR/EN AI-powered international news aggregator. It collects and summarizes breaking news from 80+ RSS sources worldwide, covering World, Politics, Economy, Science & Tech, Climate, Conflicts, Health, Culture, and Sports. Articles are scored by importance (0-100) using Claude AI (Anthropic). Top Stories are the highest-importance articles of the last 24 hours.
+
+## What GlobeVortex does
+- Aggregates news from 80+ international RSS sources (BBC, CNN, RFI, Le Figaro, franceinfo, Radio-Canada, Sky Sports, and more)
+- Publishes bilingual content in French and English
+- Uses Claude Haiku AI (Anthropic) to classify, summarize, and score each article by importance
+- Updates every 15 minutes via automated cron jobs
+- Displays Top Stories (importance score >= 60) and category-filtered news
+
+## Pages
+- / : Home page with Top Stories and all news categories
+- /about : About GlobeVortex, how it works, technology stack
+- /article/[id] : Individual article pages with full metadata and link to original source
+
+## Categories
+World, Politics, Economy, Science & Tech, Climate, Conflicts, Health, Culture, Sports
+
+## Technology
+- Built with Next.js 16, TypeScript, Tailwind CSS v4
+- Database: Supabase (PostgreSQL)
+- AI: Claude Haiku 4.5 (Anthropic) for classification, summarization and importance scoring
+- Deployed on Vercel
+- Cron: GitHub Actions every 15 minutes
+
+## Contact
+admin@globevortex.com
+
+## Sitemap
+https://globevortex.com/sitemap.xml
