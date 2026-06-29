@@ -28,14 +28,14 @@ const UI_TEXT: Record<
   }
 > = {
   en: {
-    latest: "World · Right Now",
+    latest: "World News · Live",
     empty: "No stories available right now.",
     searchPlaceholder: "Search news...",
     searchResults: (n, q) => `${n} result${n !== 1 ? "s" : ""} for "${q}"`,
     searchEmpty: (q) => `No results for "${q}"`,
   },
   fr: {
-    latest: "Le Monde · En Direct",
+    latest: "Actualités Mondiales · En Direct",
     empty: "Aucun article disponible pour le moment.",
     searchPlaceholder: "Rechercher...",
     searchResults: (n, q) => `${n} résultat${n !== 1 ? "s" : ""} pour "${q}"`,

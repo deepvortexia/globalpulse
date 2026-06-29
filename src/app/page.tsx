@@ -62,11 +62,6 @@ export default async function Home() {
         "name": "GlobeVortex",
         "description": "Bilingual FR/EN AI-powered international news aggregator — world news summarized by Claude AI from 50+ trusted sources.",
         "inLanguage": ["en", "fr"],
-        "potentialAction": {
-          "@type": "SearchAction",
-          "target": "https://globevortex.com/?q={search_term_string}",
-          "query-input": "required name=search_term_string",
-        },
       },
       {
         "@type": "NewsMediaOrganization",
