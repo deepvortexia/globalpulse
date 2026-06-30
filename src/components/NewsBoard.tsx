@@ -12,8 +12,10 @@ import Footer from "@/components/Footer";
 
 interface NewsBoardProps {
   articles: Article[];
-  // Prefetched high-importance set shown when the "top" category is selected.
-  topStories?: Article[];
+  // Prefetched high-importance set shown when the "top" category is selected,
+  // pre-split by language (each array is already a full 10-story rail in that
+  // language), so selecting "top" just reads the active language's array.
+  topStories?: Record<Language, Article[]>;
   error?: string | null;
 }
 
@@ -48,7 +50,7 @@ const ARTICLES_PER_PAGE = 24;
 // Client boundary that owns the language toggle and everything that reacts to
 // it (header, heading, grid). Articles arrive pre-fetched from the Server
 // Component as props — no data fetching happens here.
-export default function NewsBoard({ articles, topStories = [], error }: NewsBoardProps) {
+export default function NewsBoard({ articles, topStories = { en: [], fr: [] }, error }: NewsBoardProps) {
   const [language, setLanguage] = useState<Language>("en");
   const [categoryId, setCategoryId] = useState<CategoryId>("top");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -79,11 +81,12 @@ export default function NewsBoard({ articles, topStories = [], error }: NewsBoar
   }, [languageArticles]);
 
   // Narrow the language pool to the selected category (all = no filter). "top"
-  // is a virtual bucket served from the prefetched topStories set rather than
-  // the main pool; still apply the strict per-language filter for consistency.
+  // is a virtual bucket served from the prefetched topStories set, which is
+  // already pre-split by language server-side — just read the active language's
+  // array (a complete 10-story rail) rather than filtering a bilingual list.
   const visibleArticles = useMemo(() => {
     if (categoryId === "top") {
-      return topStories.filter((article) => article.language === language);
+      return topStories[language];
     }
     if (categoryId === "all") return languageArticles;
     return languageArticles.filter((article) => article.category === categoryId);

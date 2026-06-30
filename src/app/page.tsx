@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { getArticles, getTopStories } from "@/lib/articles";
+import { getArticles, getTopStoriesByLanguage } from "@/lib/articles";
+import type { TopStoriesByLanguage } from "@/lib/articles";
 import type { Article } from "@/types";
 import NewsBoard from "@/components/NewsBoard";
 
@@ -31,11 +32,12 @@ const HOME_WINDOW_HOURS = 168;
 
 export default async function Home() {
   let articles: Article[] = [];
-  // Top Stories is a virtual category: the active-category state lives client-
-  // side in NewsBoard, so we can't branch the fetch on it here. Instead we
-  // prefetch the high-importance set alongside the main pool and hand both to
-  // NewsBoard, which swaps in topStories when the "top" pill is selected.
-  let topStories: Article[] = [];
+  // Top Stories is a virtual category, and the active language + category both
+  // live in client state inside NewsBoard, so we can't branch the fetch on them
+  // here. Instead we prefetch the high-importance set for BOTH languages (each a
+  // full 10-story rail) alongside the main pool and hand them to NewsBoard, which
+  // swaps in the matching-language array when the "top" pill is selected.
+  let topStories: TopStoriesByLanguage = { en: [], fr: [] };
   let error: string | null = null;
 
   try {
@@ -46,7 +48,7 @@ export default async function Home() {
         pageSize: HOME_POOL_SIZE,
         sinceHours: HOME_WINDOW_HOURS,
       }),
-      getTopStories(),
+      getTopStoriesByLanguage(),
     ]);
   } catch (e) {
     error = e instanceof Error ? e.message : "Failed to load news";

@@ -131,33 +131,41 @@ function articleAgeHours(row: DbArticleRow, nowMs: number): number {
   return Math.max(0, (nowMs - ts) / 3_600_000);
 }
 
-// Builds the Top Stories rail for the "Live" section. Two problems this fixes:
-// it must always ship 10 stories (when 10 exist in the last 7 days) and must not
-// surface stale news.
+// Builds the Top Stories rail for the "Live" section, for a single UI language.
+// Two problems this fixes: it must always ship 10 stories (when 10 exist in the
+// last 7 days) and must not surface stale news. The rail is rendered strictly in
+// the active language (NewsBoard never mixes languages), so the whole cascade
+// below runs inside that one language's pool — that way each language gets its
+// own 10, instead of 10 bilingual stories that halve once filtered client-side.
 //
-// Cascading window strategy: we pull one broad candidate pool (importance >= the
-// last-resort floor, ingested within 7 days), then walk TOP_STORIES_TIERS from
-// strictest/freshest to widest and keep the first tier that already holds >= 10
-// candidates. So Top Stories prefers score >= 60 within 6h, expands the window to
-// 24h then 7d if that's too thin, and only then lowers the floor to >= 40 across
-// the same widening windows. If even the widest tier can't reach 10 we ship what
-// qualifies — never anything older than 7 days.
+// Cascading window strategy: we pull one broad candidate pool (this language,
+// importance >= the last-resort floor, ingested within 7 days), then walk
+// TOP_STORIES_TIERS from strictest/freshest to widest and keep the first tier
+// that already holds >= 10 candidates. So Top Stories prefers score >= 60 within
+// 6h, expands the window to 24h then 7d if that's too thin, and only then lowers
+// the floor to >= 40 across the same widening windows. If even the widest tier
+// can't reach 10 we ship what qualifies — never anything older than 7 days.
 //
 // Ranking applies a recency-decay penalty (see TOP_STORIES_DECAY_PER_HOUR) so a
 // fresh story beats an older one of similar importance, while diversification
 // reserves 3 headline slots (any category) plus one best-in-category for breadth.
 // The 10-story guarantee wins over diversity: leftover slots are filled by the
 // next best-ranked articles regardless of category.
-export async function getTopStories(): Promise<Article[]> {
+//
+// page.tsx is an ISR Server Component and can't read the client-side language
+// toggle, so it calls this once per language in parallel and hands NewsBoard both
+// arrays keyed by language (see getTopStoriesByLanguage).
+export async function getTopStories(language: Language): Promise<Article[]> {
   const db = getServiceRoleClient();
   const nowMs = Date.now();
   const since7d = new Date(nowMs - TOP_STORIES_MAX_AGE_HOURS * 60 * 60 * 1000).toISOString();
 
-  // Broad gate on ingestion time; real publish-age filtering happens in memory
-  // below so a recently-seeded but genuinely old article can't sneak in.
+  // Broad gate on language + ingestion time; real publish-age filtering happens
+  // in memory below so a recently-seeded but genuinely old article can't sneak in.
   const { data, error } = await db
     .from("articles")
     .select("*")
+    .eq("language", language)
     .gte("created_at", since7d)
     .gte("importance_score", TOP_STORIES_FALLBACK_SCORE)
     .order("importance_score", { ascending: false })
@@ -227,6 +235,18 @@ export async function getTopStories(): Promise<Article[]> {
   // Final display order: best adjusted (importance + recency) score first.
   selected.sort((a, b) => adjustedScore(b) - adjustedScore(a));
   return selected.slice(0, TOP_STORIES_TARGET).map(rowToArticle);
+}
+
+// Top Stories for both UI languages, keyed by language. NewsBoard swaps between
+// these arrays on the language toggle, so each is already a complete 10-story
+// rail in its own language — no client-side language filtering required.
+export type TopStoriesByLanguage = Record<Language, Article[]>;
+
+// Convenience wrapper for the home Server Component: runs the per-language
+// cascade for EN and FR in parallel (independent queries) and returns both.
+export async function getTopStoriesByLanguage(): Promise<TopStoriesByLanguage> {
+  const [en, fr] = await Promise.all([getTopStories("en"), getTopStories("fr")]);
+  return { en, fr };
 }
 
 // Fetches a single article by its id (the public slug). Returns the raw DB row
