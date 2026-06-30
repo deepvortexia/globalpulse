@@ -21,11 +21,34 @@ export interface DbArticleRow {
 
 const DEFAULT_PAGE_SIZE = 24;
 const DEFAULT_SINCE_HOURS = 24;
-const TOP_STORIES_MIN_SCORE = 60;
-const TOP_STORIES_TARGET = 10;
-const TOP_STORIES_FALLBACK_CATEGORIES: ReadonlyArray<ArticleCategory> = [
-  "world", "politics", "economy", "science", "climate",
-  "conflicts", "health", "culture", "sports",
+
+// ── Top Stories tuning ───────────────────────────────────────────────────────
+const TOP_STORIES_TARGET = 10;            // exact number of stories we aim to ship
+const TOP_STORIES_HEADLINES = 3;          // top slots that ignore category diversity
+const TOP_STORIES_MIN_SCORE = 60;         // preferred importance floor
+const TOP_STORIES_FALLBACK_SCORE = 40;    // last-resort importance floor
+const TOP_STORIES_MAX_AGE_HOURS = 7 * 24; // hard cap: never surface news older than 7 days
+
+// Recency decay (points subtracted from importance per hour of article age). At
+// 0.4/h a 24h-old story loses ~9.6 pts versus ~0.4 for a 1h-old one, so fresh
+// stories outrank similarly-important older ones — yet a 7-day-old blockbuster
+// only sheds ~67 pts, leaving a genuinely huge story able to surface when recent
+// good stories run dry.
+const TOP_STORIES_DECAY_PER_HOUR = 0.4;
+
+// Cascading (importance floor, max age) tiers, strictest/freshest first. We walk
+// these in order and stop at the first tier whose candidate pool already holds
+// at least TOP_STORIES_TARGET articles. This keeps the rail as fresh and as
+// high-importance as the data allows: we only widen the time window (6h → 24h →
+// 7d) when there aren't 10 qualifying stories, and only relax the score floor
+// (60 → 40) as a final resort once even the full 7-day window is too thin.
+const TOP_STORIES_TIERS: ReadonlyArray<{ minScore: number; maxAgeHours: number }> = [
+  { minScore: TOP_STORIES_MIN_SCORE, maxAgeHours: 6 },
+  { minScore: TOP_STORIES_MIN_SCORE, maxAgeHours: 24 },
+  { minScore: TOP_STORIES_MIN_SCORE, maxAgeHours: TOP_STORIES_MAX_AGE_HOURS },
+  { minScore: TOP_STORIES_FALLBACK_SCORE, maxAgeHours: 6 },
+  { minScore: TOP_STORIES_FALLBACK_SCORE, maxAgeHours: 24 },
+  { minScore: TOP_STORIES_FALLBACK_SCORE, maxAgeHours: TOP_STORIES_MAX_AGE_HOURS },
 ];
 
 type ArticleCategory = Exclude<CategoryId, "all" | "top">;
@@ -96,69 +119,114 @@ export async function getArticles({
   return (data as DbArticleRow[]).map(rowToArticle);
 }
 
-// Reads the highest-importance recent articles for the Top Stories rail.
-// Diversity strategy: guaranteed cross-category representation.
-//   Step 1 — top 3 overall (any category, score >= 75, last 24h). These are
-//             the headline slots and may share a category.
-//   Step 2 — best article per category (9 categories, last 48h) not already
-//             seen by URL. One slot per category ensures breadth.
-//   Step 3 — merge, deduplicate by URL, sort by importance_score DESC, cap 10.
-export async function getTopStories({
-  sinceHours = DEFAULT_SINCE_HOURS,
-}: { sinceHours?: number } = {}): Promise<Article[]> {
-  const db = getServiceRoleClient();
-  const since24h = new Date(Date.now() - sinceHours * 60 * 60 * 1000).toISOString();
-  const since48h = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+// Effective age of an article in hours, measured from its real publish time
+// (published_at), falling back to ingestion time (created_at) when the feed gave
+// no/garbled publish date. Future-dated feeds are clamped to "now" (age 0); rows
+// whose timestamps are wholly unparseable report Infinity so the age windows
+// drop them rather than letting a bad timestamp masquerade as breaking news.
+function articleAgeHours(row: DbArticleRow, nowMs: number): number {
+  let ts = row.published_at ? Date.parse(row.published_at) : Number.NaN;
+  if (Number.isNaN(ts)) ts = Date.parse(row.created_at);
+  if (Number.isNaN(ts)) return Number.POSITIVE_INFINITY;
+  return Math.max(0, (nowMs - ts) / 3_600_000);
+}
 
-  // Step 1 — top 3 headlines (any category)
-  const { data: headlineData, error: headlineError } = await db
+// Builds the Top Stories rail for the "Live" section. Two problems this fixes:
+// it must always ship 10 stories (when 10 exist in the last 7 days) and must not
+// surface stale news.
+//
+// Cascading window strategy: we pull one broad candidate pool (importance >= the
+// last-resort floor, ingested within 7 days), then walk TOP_STORIES_TIERS from
+// strictest/freshest to widest and keep the first tier that already holds >= 10
+// candidates. So Top Stories prefers score >= 60 within 6h, expands the window to
+// 24h then 7d if that's too thin, and only then lowers the floor to >= 40 across
+// the same widening windows. If even the widest tier can't reach 10 we ship what
+// qualifies — never anything older than 7 days.
+//
+// Ranking applies a recency-decay penalty (see TOP_STORIES_DECAY_PER_HOUR) so a
+// fresh story beats an older one of similar importance, while diversification
+// reserves 3 headline slots (any category) plus one best-in-category for breadth.
+// The 10-story guarantee wins over diversity: leftover slots are filled by the
+// next best-ranked articles regardless of category.
+export async function getTopStories(): Promise<Article[]> {
+  const db = getServiceRoleClient();
+  const nowMs = Date.now();
+  const since7d = new Date(nowMs - TOP_STORIES_MAX_AGE_HOURS * 60 * 60 * 1000).toISOString();
+
+  // Broad gate on ingestion time; real publish-age filtering happens in memory
+  // below so a recently-seeded but genuinely old article can't sneak in.
+  const { data, error } = await db
     .from("articles")
     .select("*")
-    .gte("created_at", since24h)
-    .gte("importance_score", TOP_STORIES_MIN_SCORE)
+    .gte("created_at", since7d)
+    .gte("importance_score", TOP_STORIES_FALLBACK_SCORE)
     .order("importance_score", { ascending: false })
-    .limit(3);
+    .limit(500);
 
-  if (headlineError) throw new Error(`Supabase top-stories read failed: ${headlineError.message}`);
+  if (error) throw new Error(`Supabase top-stories read failed: ${error.message}`);
 
-  const headlines = headlineData as DbArticleRow[];
-  const seenUrls = new Set(headlines.map((r) => r.url));
-
-  // Step 2 — best article per category from last 48h, skipping seen URLs
-  const categoryRows: DbArticleRow[] = [];
-
-  await Promise.all(
-    TOP_STORIES_FALLBACK_CATEGORIES.map(async (cat) => {
-      const { data, error } = await db
-        .from("articles")
-        .select("*")
-        .gte("created_at", since48h)
-        .eq("category", cat)
-        .order("importance_score", { ascending: false })
-        .limit(5);
-
-      if (error || !data) return;
-
-      const best = (data as DbArticleRow[]).find((r) => !seenUrls.has(r.url));
-      if (best) {
-        seenUrls.add(best.url);
-        categoryRows.push(best);
-      }
-    }),
+  const rows = (data as DbArticleRow[]).filter(
+    (r) => articleAgeHours(r, nowMs) <= TOP_STORIES_MAX_AGE_HOURS,
   );
 
-  // Step 3 — merge, deduplicate, sort, cap at TARGET
-  const merged = [...headlines, ...categoryRows];
-  merged.sort((a, b) => (b.importance_score ?? 0) - (a.importance_score ?? 0));
+  // Pick the strictest tier that already yields enough candidates. `rows` is the
+  // widest tier (floor 40, <= 7d), so it stays as the fallback pool if none hit
+  // the target — guaranteeing we still ship whatever qualifies.
+  let pool = rows;
+  for (const tier of TOP_STORIES_TIERS) {
+    const candidates = rows.filter(
+      (r) =>
+        (r.importance_score ?? 0) >= tier.minScore &&
+        articleAgeHours(r, nowMs) <= tier.maxAgeHours,
+    );
+    if (candidates.length >= TOP_STORIES_TARGET) {
+      pool = candidates;
+      break;
+    }
+  }
 
-  const seen = new Set<string>();
-  const deduped = merged.filter((r) => {
-    if (seen.has(r.url)) return false;
-    seen.add(r.url);
-    return true;
-  });
+  // Importance with a recency penalty so newer stories rank ahead of older ones
+  // of comparable importance.
+  const adjustedScore = (r: DbArticleRow) =>
+    (r.importance_score ?? 0) - articleAgeHours(r, nowMs) * TOP_STORIES_DECAY_PER_HOUR;
 
-  return deduped.slice(0, TOP_STORIES_TARGET).map(rowToArticle);
+  const ranked = [...pool].sort((a, b) => adjustedScore(b) - adjustedScore(a));
+
+  // Diversify, then backfill to the 10-story target.
+  const selected: DbArticleRow[] = [];
+  const seenUrls = new Set<string>();
+  const usedCategories = new Set<string>();
+
+  // 1) Headlines: top 3 by adjusted score, any category.
+  for (const r of ranked) {
+    if (selected.length >= TOP_STORIES_HEADLINES) break;
+    if (seenUrls.has(r.url)) continue;
+    selected.push(r);
+    seenUrls.add(r.url);
+    usedCategories.add(r.category);
+  }
+
+  // 2) Breadth: best remaining article from each not-yet-represented category.
+  for (const r of ranked) {
+    if (selected.length >= TOP_STORIES_TARGET) break;
+    if (seenUrls.has(r.url) || usedCategories.has(r.category)) continue;
+    selected.push(r);
+    seenUrls.add(r.url);
+    usedCategories.add(r.category);
+  }
+
+  // 3) Backfill: next best-ranked articles regardless of category. The 10-story
+  //    guarantee takes precedence over per-category diversity.
+  for (const r of ranked) {
+    if (selected.length >= TOP_STORIES_TARGET) break;
+    if (seenUrls.has(r.url)) continue;
+    selected.push(r);
+    seenUrls.add(r.url);
+  }
+
+  // Final display order: best adjusted (importance + recency) score first.
+  selected.sort((a, b) => adjustedScore(b) - adjustedScore(a));
+  return selected.slice(0, TOP_STORIES_TARGET).map(rowToArticle);
 }
 
 // Fetches a single article by its id (the public slug). Returns the raw DB row
