@@ -252,7 +252,7 @@ export default function NewsBoard({ articles, topStories = { en: [], fr: [] }, e
 
             {visibleArticles.length > 0 && (
               <>
-                <NewsGrid articles={paginatedArticles} language={language} />
+                <NewsGrid articles={paginatedArticles} language={language} forceBreaking={categoryId === "top"} />
                 <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}

@@ -11,6 +11,7 @@ interface NewsCardProps {
   article: Article;
   language: Language;
   featured?: boolean;
+  forceBreaking?: boolean;
 }
 
 const MAX_TILT = 8; // degrees
@@ -24,7 +25,7 @@ function formatPublished(publishedAt: string, language: Language): string {
   });
 }
 
-function NewsCard({ article, language, featured = false }: NewsCardProps) {
+function NewsCard({ article, language, featured = false, forceBreaking = false }: NewsCardProps) {
   const cardRef = useRef<HTMLAnchorElement>(null);
   const [tilt, setTilt] = useState({ rotateX: 0, rotateY: 0 });
   const [hovering, setHovering] = useState(false);
@@ -100,7 +101,7 @@ function NewsCard({ article, language, featured = false }: NewsCardProps) {
         <span className="rounded-full bg-gv-gold/10 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-gv-gold">
           {categoryLabel(article.category, language)}
         </span>
-        {article.isBreaking && (
+        {(article.isBreaking || forceBreaking) && (
           <span className="flex items-center gap-1.5 rounded-full bg-red-500/10 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-red-500">
             <span className="relative flex h-2 w-2 flex-shrink-0">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />

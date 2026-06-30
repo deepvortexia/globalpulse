@@ -7,6 +7,7 @@ import NewsCard from "./NewsCard";
 interface NewsGridProps {
   articles: Article[];
   language: Language;
+  forceBreaking?: boolean;
 }
 
 // Cards reveal in waves; bounding the stagger keeps far-down cards from
@@ -18,7 +19,7 @@ const STAGGER_WINDOW = 9;
 // scrolls — keeps the DOM small for 400+ article feeds.
 const PAGE_SIZE = 30;
 
-export default function NewsGrid({ articles, language }: NewsGridProps) {
+export default function NewsGrid({ articles, language, forceBreaking = false }: NewsGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -103,6 +104,7 @@ export default function NewsGrid({ articles, language }: NewsGridProps) {
               article={article}
               language={language}
               featured={index % 3 === 0}
+              forceBreaking={forceBreaking}
             />
           </div>
         ))}
