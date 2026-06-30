@@ -23,7 +23,7 @@ const DEFAULT_PAGE_SIZE = 24;
 const DEFAULT_SINCE_HOURS = 24;
 
 // ── Top Stories tuning ───────────────────────────────────────────────────────
-const TOP_STORIES_TARGET = 10;            // exact number of stories we aim to ship
+const TOP_STORIES_TARGET = 12;            // exact number of stories we aim to ship
 const TOP_STORIES_HEADLINES = 3;          // top slots that ignore category diversity
 const TOP_STORIES_MIN_SCORE = 60;         // preferred importance floor
 const TOP_STORIES_FALLBACK_SCORE = 40;    // last-resort importance floor
@@ -60,8 +60,11 @@ const VALID_CATEGORIES: ReadonlySet<string> = new Set<ArticleCategory>([
 
 // Maps a DB row to the Article shape the frontend already consumes. `summary`
 // becomes `description`; `country` is unused by the UI so it defaults to "".
+// `isBreaking` is stamped at mapping time (ISR revalidates every 60s, so the
+// flag is always within a minute of accurate — fine for a breaking badge).
 export function rowToArticle(row: DbArticleRow): Article {
   const category = (VALID_CATEGORIES.has(row.category) ? row.category : "world") as ArticleCategory;
+  const ageHours = articleAgeHours(row, Date.now());
   return {
     id: row.id,
     title: row.title,
@@ -73,6 +76,7 @@ export function rowToArticle(row: DbArticleRow): Article {
     country: "",
     publishedAt: row.published_at ?? row.created_at,
     imageUrl: row.image_url,
+    isBreaking: (row.importance_score ?? 0) >= 75 && ageHours <= 2,
   };
 }
 

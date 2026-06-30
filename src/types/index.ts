@@ -33,6 +33,8 @@ export interface Article {
   country: string;
   publishedAt: string;
   imageUrl: string | null;
+  // True when importance_score >= 75 and article age <= 2h at ingestion time.
+  isBreaking?: boolean;
 }
 
 export interface Summary {

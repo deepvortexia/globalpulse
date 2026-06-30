@@ -96,9 +96,20 @@ function NewsCard({ article, language, featured = false }: NewsCardProps) {
       }}
       className="group flex h-full flex-col gap-3 rounded-xl border border-gv-border bg-gv-card p-3 [transform-style:preserve-3d] hover:border-gv-gold sm:p-4 lg:p-5"
     >
-      <span className="self-start rounded-full bg-gv-gold/10 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-gv-gold">
-        {categoryLabel(article.category, language)}
-      </span>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="rounded-full bg-gv-gold/10 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-gv-gold">
+          {categoryLabel(article.category, language)}
+        </span>
+        {article.isBreaking && (
+          <span className="flex items-center gap-1.5 rounded-full bg-red-500/10 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-red-500">
+            <span className="relative flex h-2 w-2 flex-shrink-0">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+            </span>
+            {language === "fr" ? "URGENT" : "BREAKING"}
+          </span>
+        )}
+      </div>
 
       <h3 className="font-display text-base font-semibold leading-snug text-white sm:text-lg">
         {article.title}
