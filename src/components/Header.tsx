@@ -78,7 +78,7 @@ export default function Header({
         >
           <svg
             aria-hidden
-            className="h-3.5 w-3.5 flex-shrink-0 text-gv-gold"
+            className="h-3.5 w-3.5 flex-shrink-0 text-black"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
