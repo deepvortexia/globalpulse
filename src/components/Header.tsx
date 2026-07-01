@@ -76,7 +76,18 @@ export default function Header({
           href={`/${language}/2026`}
           className="animate-gv-2026-pulse hidden items-center gap-1.5 rounded-full bg-gradient-to-r from-[#C9A84C] to-[#E8C96D] px-3 py-1 text-sm font-bold text-black transition-opacity hover:opacity-90 sm:flex"
         >
-          <span aria-hidden>🌀</span>
+          <svg
+            aria-hidden
+            className="h-3.5 w-3.5 flex-shrink-0 text-gv-gold"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M21 12a9 9 0 1 1-9-9" />
+          </svg>
           <span>{language === "fr" ? "2026 en 3D" : "2026 in 3D"}</span>
         </Link>
 
