@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import type { CategoryId, Language } from "@/types";
 import { CATEGORIES, categoryLabel } from "@/lib/categories";
 
@@ -159,6 +160,18 @@ export default function CategoryNav({
             </div>
 
             <nav aria-label="Categories" className="flex-1 overflow-y-auto py-2">
+              {/* 2026 Year in Review — signature feature page, placed first */}
+              <Link
+                href={`/${language}/2026`}
+                onClick={onMenuClose}
+                className="flex min-h-[44px] w-full items-center gap-3 border-l-2 border-[#C9A84C] bg-gradient-to-r from-[#C9A84C]/20 to-[#E8C96D]/10 px-4 py-3 text-left text-sm font-bold text-gv-gold transition-colors hover:from-[#C9A84C]/30 hover:to-[#E8C96D]/20"
+              >
+                <span aria-hidden>✨</span>
+                <span className="flex-1">
+                  {language === "fr" ? "2026 en revue" : "2026 in Review"}
+                </span>
+              </Link>
+
               {CATEGORIES.filter((cat) => cat.id !== "fifa").map((cat) => {
                 const active = cat.id === activeId;
                 // Top Stories: first row, red styling, no count badge.
