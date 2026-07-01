@@ -223,14 +223,19 @@ export async function GET(req: Request) {
       const { data, error } = await db
         .from("articles")
         .upsert(rows, { onConflict: "url", ignoreDuplicates: true })
-        .select("id, url");
+        .select("id, url, language");
       if (error) throw new Error(`Supabase insert failed: ${error.message}`);
       inserted = data?.length ?? 0;
 
       // Notify IndexNow once per run (not per article) so Bing/Yandex/Seznam/
-      // Naver can crawl new articles immediately. Never fails the cron.
+      // Naver can crawl new articles immediately. Submit the locale-prefixed
+      // canonical URL (/{lang}/article/{id}) so we don't push URLs that would
+      // immediately 301. Never fails the cron.
       if (data && data.length > 0) {
-        const articleUrls = data.map((row: { id: string }) => `https://globevortex.com/article/${row.id}`);
+        const articleUrls = data.map((row: { id: string; language: string }) => {
+          const lang = row.language === "fr" ? "fr" : "en";
+          return `https://globevortex.com/${lang}/article/${row.id}`;
+        });
         await submitToIndexNow(articleUrls);
       }
     }

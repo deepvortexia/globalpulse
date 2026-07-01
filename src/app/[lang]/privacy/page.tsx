@@ -2,13 +2,30 @@ import type { Metadata } from "next";
 import type { Language } from "@/types";
 import LegalDoc, { type LegalCopy } from "@/components/LegalDoc";
 
-export const metadata: Metadata = {
-  title: "Privacy Policy",
-  description:
-    "GlobeVortex privacy policy — anonymous analytics only, no personal data sold. GDPR, Quebec Law 25 and CCPA rights.",
-  alternates: { canonical: "https://globevortex.com/privacy" },
-  robots: { index: true, follow: true },
+const SITE = "https://globevortex.com";
+
+type PrivacyPageProps = {
+  params: Promise<{ lang: string }>;
 };
+
+export async function generateMetadata({ params }: PrivacyPageProps): Promise<Metadata> {
+  const { lang } = await params;
+  const locale = lang === "fr" ? "fr" : "en";
+  return {
+    title: "Privacy Policy",
+    description:
+      "GlobeVortex privacy policy — anonymous analytics only, no personal data sold. GDPR, Quebec Law 25 and CCPA rights.",
+    alternates: {
+      canonical: `${SITE}/${locale}/privacy`,
+      languages: {
+        en: `${SITE}/en/privacy`,
+        fr: `${SITE}/fr/privacy`,
+        "x-default": `${SITE}/en/privacy`,
+      },
+    },
+    robots: { index: true, follow: true },
+  };
+}
 
 const COPY: Record<Language, LegalCopy> = {
   en: {
@@ -163,6 +180,8 @@ const COPY: Record<Language, LegalCopy> = {
   },
 };
 
-export default function PrivacyPage() {
-  return <LegalDoc copy={COPY} />;
+export default async function PrivacyPage({ params }: PrivacyPageProps) {
+  const { lang } = await params;
+  const language = (lang === "fr" ? "fr" : "en") as Language;
+  return <LegalDoc copy={COPY[language]} language={language} path="privacy" />;
 }

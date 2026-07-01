@@ -267,32 +267,39 @@ export async function getArticleBySlug(slug: string): Promise<DbArticleRow | nul
   return data as DbArticleRow;
 }
 
-// Lightweight id + timestamp list for the dynamic sitemap. Newest first, capped
-// at 1000 to stay within Google's 50k-URL / 50MB per-file sitemap budget.
+// Lightweight id + timestamp + language list for the dynamic sitemap. Newest
+// first, capped at 1000 to stay within Google's 50k-URL / 50MB per-file sitemap
+// budget. `language` is needed so each article is listed under its own locale
+// prefix (/{lang}/article/{id}) — an article exists in one locale only.
 export async function getArticleIdsForSitemap(): Promise<
-  Pick<DbArticleRow, "id" | "created_at">[]
+  Pick<DbArticleRow, "id" | "created_at" | "language">[]
 > {
   const { data, error } = await getServiceRoleClient()
     .from("articles")
-    .select("id, created_at")
+    .select("id, created_at, language")
     .order("created_at", { ascending: false })
     .limit(1000);
   if (error || !data) return [];
-  return data as Pick<DbArticleRow, "id" | "created_at">[];
+  return data as Pick<DbArticleRow, "id" | "created_at" | "language">[];
 }
 
-// Most recently ingested articles across both languages, for the RSS feed
-// (Google Discover "Follow" support). Ordered by created_at (ingestion time),
-// matching the sitemap's ordering — not published_at, so the feed always
-// reflects what GlobeVortex just added rather than the original publish date.
+// Most recently ingested articles for the RSS feed (Google Discover "Follow"
+// support). Ordered by created_at (ingestion time), matching the sitemap's
+// ordering — not published_at, so the feed always reflects what GlobeVortex
+// just added rather than the original publish date. Pass a `language` to scope
+// the feed to a single locale (each locale has its own /{lang}/feed.xml);
+// omitting it returns both languages (legacy combined behaviour).
 export async function getRecentArticlesForFeed(
   limit = 50,
+  language?: Language,
 ): Promise<Pick<DbArticleRow, "id" | "title" | "summary" | "created_at">[]> {
-  const { data, error } = await getServiceRoleClient()
+  let query = getServiceRoleClient()
     .from("articles")
     .select("id, title, summary, created_at")
     .order("created_at", { ascending: false })
     .limit(limit);
+  if (language) query = query.eq("language", language);
+  const { data, error } = await query;
   if (error) throw new Error(`Supabase feed read failed: ${error.message}`);
   return data as Pick<DbArticleRow, "id" | "title" | "summary" | "created_at">[];
 }

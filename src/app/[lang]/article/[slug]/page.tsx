@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getArticleBySlug, getRelatedArticles } from "@/lib/articles";
 import { categoryLabel } from "@/lib/categories";
-import type { CategoryId } from "@/types";
+import type { CategoryId, Language } from "@/types";
 
 // ISR: article pages are static between hourly revalidations. Content rarely
 // changes after ingestion, so an hour keeps them cheap and crawler-friendly.
@@ -12,7 +12,7 @@ export const revalidate = 3600;
 
 // Next 16: route params arrive as a Promise and must be awaited.
 type ArticlePageProps = {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ lang: string; slug: string }>;
 };
 
 const SITE = "https://globevortex.com";
@@ -20,14 +20,16 @@ const SITE = "https://globevortex.com";
 export async function generateMetadata({
   params,
 }: ArticlePageProps): Promise<Metadata> {
-  const { slug } = await params;
+  const { lang, slug } = await params;
   const article = await getArticleBySlug(slug);
 
-  if (!article) {
+  // Each article exists under exactly one locale (its own language). A request
+  // for the wrong-locale URL is a 404, so its metadata is noindex too.
+  if (!article || article.language !== lang) {
     return { title: "Article not found", robots: { index: false, follow: false } };
   }
 
-  const url = `${SITE}/article/${article.id}`;
+  const url = `${SITE}/${lang}/article/${article.id}`;
   const description = article.summary?.slice(0, 160) ?? article.title;
   const images = article.image_url
     ? [{ url: article.image_url, width: 1200, height: 630 }]
@@ -36,12 +38,15 @@ export async function generateMetadata({
   return {
     title: article.title,
     description,
+    // Self-referential canonical only — no cross-locale hreflang, because the
+    // article is single-language and has no counterpart in the other locale.
     alternates: { canonical: url },
     robots: { index: true, follow: true },
     openGraph: {
       title: article.title,
       description,
       type: "article",
+      locale: article.language === "fr" ? "fr_CA" : "en_US",
       publishedTime: article.published_at ?? article.created_at,
       url,
       images,
@@ -50,13 +55,18 @@ export async function generateMetadata({
 }
 
 export default async function ArticlePage({ params }: ArticlePageProps) {
-  const { slug } = await params;
+  const { lang, slug } = await params;
   const article = await getArticleBySlug(slug);
 
   if (!article) notFound();
 
-  const language = article.language === "fr" ? "fr" : "en";
-  const url = `${SITE}/article/${article.id}`;
+  // Locale integrity: an article only lives under its own language. If someone
+  // hits /en/article/{fr-id}, 404 rather than render an English shell around
+  // French content — keeps one canonical URL per article.
+  const language = (article.language === "fr" ? "fr" : "en") as Language;
+  if (language !== lang) notFound();
+
+  const url = `${SITE}/${language}/article/${article.id}`;
   const published = article.published_at ?? article.created_at;
   const categoryName = categoryLabel(article.category as CategoryId, language);
 
@@ -123,8 +133,8 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "GlobeVortex", item: SITE },
-      { "@type": "ListItem", position: 2, name: categoryName, item: SITE },
+      { "@type": "ListItem", position: 1, name: "GlobeVortex", item: `${SITE}/${language}` },
+      { "@type": "ListItem", position: 2, name: categoryName, item: `${SITE}/${language}` },
       { "@type": "ListItem", position: 3, name: article.title },
     ],
   };
@@ -142,7 +152,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
       <article className="mx-auto max-w-3xl px-4 py-8">
         <Link
-          href="/"
+          href={`/${language}`}
           className="inline-flex items-center gap-1 text-sm font-semibold text-[#C9A84C] transition-colors hover:text-[#E0C66A]"
         >
           <span aria-hidden>←</span> {t.back}
@@ -199,9 +209,11 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             </h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {related.map((item) => (
+                // Related stories can be in either language; link each to its
+                // OWN locale so the target's locale guard never 404s.
                 <Link
                   key={item.id}
-                  href={`/article/${item.id}`}
+                  href={`/${item.language === "fr" ? "fr" : "en"}/article/${item.id}`}
                   className="group rounded-lg border border-white/10 bg-white/[0.02] p-4 transition-colors hover:border-[#C9A84C]"
                 >
                   {item.image_url && (

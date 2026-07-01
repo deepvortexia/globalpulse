@@ -83,7 +83,7 @@ function NewsCard({ article, language, featured = false, forceBreaking = false }
   return (
     <Link
       ref={cardRef}
-      href={`/article/${article.id}`}
+      href={`/${language}/article/${article.id}`}
       onMouseMove={canHover ? handleMouseMove : undefined}
       onMouseLeave={canHover ? handleMouseLeave : undefined}
       style={{

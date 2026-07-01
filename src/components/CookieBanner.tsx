@@ -22,17 +22,18 @@ const TEXT: Record<BannerLang, { message: string; link: string; accept: string; 
   },
 };
 
-export default function CookieBanner() {
+export default function CookieBanner({ lang = "en" }: { lang?: BannerLang }) {
   const [visible, setVisible] = useState(false);
   const [leaving, setLeaving] = useState(false);
-  const [language, setLanguage] = useState<BannerLang>("en");
+  // Banner language now follows the URL locale (passed from the [lang] layout)
+  // instead of a localStorage flag nothing ever set.
+  const language = lang;
 
-  // Read consent + language only after mount: localStorage is client-only, and
-  // starting hidden keeps the SSR markup (null) identical to first client render.
+  // Read consent only after mount: localStorage is client-only, and starting
+  // hidden keeps the SSR markup (null) identical to the first client render.
   useEffect(() => {
     const consent = localStorage.getItem("gv-cookie-consent");
     if (consent === "accepted" || consent === "declined") return;
-    setLanguage(localStorage.getItem("gv-language") === "fr" ? "fr" : "en");
     setVisible(true);
   }, []);
 
@@ -62,7 +63,7 @@ export default function CookieBanner() {
     >
       <p className="max-w-3xl text-sm text-gv-muted">
         {t.message}
-        <Link href="/privacy" className="text-gv-gold transition-colors hover:text-gv-gold-light">
+        <Link href={`/${language}/privacy`} className="text-gv-gold transition-colors hover:text-gv-gold-light">
           {t.link}
         </Link>
       </p>

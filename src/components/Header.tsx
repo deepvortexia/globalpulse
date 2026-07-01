@@ -1,12 +1,12 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import type { Article, Language } from "@/types";
 import BreakingNewsFeed from "@/components/BreakingNewsFeed";
 
 interface HeaderProps {
   language: Language;
-  onLanguageChange: (language: Language) => void;
   onMenuClick?: () => void;
   articles: Article[];
   onFifaClick: () => void;
@@ -17,7 +17,6 @@ const LANGUAGES: Language[] = ["fr", "en"];
 
 export default function Header({
   language,
-  onLanguageChange,
   onMenuClick,
   articles,
   onFifaClick,
@@ -83,15 +82,20 @@ export default function Header({
             </span>
           </div>
 
+          {/* Locale switch: real navigation to /en or /fr (the homepage roots),
+              so the URL and server-rendered content always match. Replaces the
+              old client-side toggle. `scroll={false}` keeps the viewport put
+              across the locale swap. */}
           <div className="flex items-center rounded-full border border-gv-border p-0.5">
             {LANGUAGES.map((lang) => {
               const active = lang === language;
               return (
-                <button
+                <Link
                   key={lang}
-                  type="button"
-                  onClick={() => onLanguageChange(lang)}
-                  aria-pressed={active}
+                  href={`/${lang}`}
+                  scroll={false}
+                  hrefLang={lang}
+                  aria-current={active ? "true" : undefined}
                   className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase transition-colors sm:px-3 sm:text-xs ${
                     active
                       ? "bg-gv-gold text-gv-bg"
@@ -99,7 +103,7 @@ export default function Header({
                   }`}
                 >
                   {lang}
-                </button>
+                </Link>
               );
             })}
           </div>
