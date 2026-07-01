@@ -155,6 +155,29 @@ body::before {
   }
 }
 
+/* ── "2026 in 3D" nav pill: slow gold glow pulse to read as the signature
+   featured link rather than a regular category filter. ──────────────────── */
+@keyframes gv-2026-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 12px rgba(201, 168, 76, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 22px rgba(201, 168, 76, 0.85);
+  }
+}
+
+.animate-gv-2026-pulse {
+  animation: gv-2026-pulse 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-gv-2026-pulse {
+    animation: none;
+    box-shadow: 0 0 16px rgba(201, 168, 76, 0.6);
+  }
+}
+
 /* ── 2026 Year in Review: vortex parallax ──────────────────────────────────
    All layers read --gvs (window.scrollY, unitless) set once per frame on
    .gv-vortex-root by VortexJourney.tsx. Only transform/opacity animate, so

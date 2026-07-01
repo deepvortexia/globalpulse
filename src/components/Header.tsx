@@ -70,14 +70,14 @@ export default function Header({
           <span>FIFA</span>
         </button>
 
-        {/* 2026 Year in Review — signature feature page; gold gradient marks
-            it as special rather than a regular category filter */}
+        {/* 2026 Year in Review — signature feature page; gold gradient +
+            pulsing glow mark it as special rather than a regular category filter */}
         <Link
           href={`/${language}/2026`}
-          className="hidden items-center gap-1.5 rounded-full bg-gradient-to-r from-[#C9A84C] to-[#E8C96D] px-3 py-1 text-sm font-bold text-black shadow-[0_0_12px_rgba(201,168,76,0.3)] transition-opacity hover:opacity-90 sm:flex"
+          className="animate-gv-2026-pulse hidden items-center gap-1.5 rounded-full bg-gradient-to-r from-[#C9A84C] to-[#E8C96D] px-3 py-1 text-sm font-bold text-black transition-opacity hover:opacity-90 sm:flex"
         >
-          <span aria-hidden>✨</span>
-          <span>{language === "fr" ? "2026 en revue" : "2026 in Review"}</span>
+          <span aria-hidden>🌀</span>
+          <span>{language === "fr" ? "2026 en 3D" : "2026 in 3D"}</span>
         </Link>
 
         {/* Live indicator + language toggle */}

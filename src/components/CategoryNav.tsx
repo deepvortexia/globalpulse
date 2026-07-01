@@ -164,11 +164,11 @@ export default function CategoryNav({
               <Link
                 href={`/${language}/2026`}
                 onClick={onMenuClose}
-                className="flex min-h-[44px] w-full items-center gap-3 border-l-2 border-[#C9A84C] bg-gradient-to-r from-[#C9A84C]/20 to-[#E8C96D]/10 px-4 py-3 text-left text-sm font-bold text-gv-gold transition-colors hover:from-[#C9A84C]/30 hover:to-[#E8C96D]/20"
+                className="animate-gv-2026-pulse flex min-h-[44px] w-full items-center gap-3 border-l-2 border-[#C9A84C] bg-gradient-to-r from-[#C9A84C]/20 to-[#E8C96D]/10 px-4 py-3 text-left text-sm font-bold text-gv-gold transition-colors hover:from-[#C9A84C]/30 hover:to-[#E8C96D]/20"
               >
-                <span aria-hidden>✨</span>
+                <span aria-hidden>🌀</span>
                 <span className="flex-1">
-                  {language === "fr" ? "2026 en revue" : "2026 in Review"}
+                  {language === "fr" ? "2026 en 3D" : "2026 in 3D"}
                 </span>
               </Link>
 
