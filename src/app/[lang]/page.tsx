@@ -27,8 +27,11 @@ export async function generateMetadata({ params }: HomeProps): Promise<Metadata>
     },
     openGraph: {
       // A page-level openGraph replaces (not deep-merges) the root layout's, so
-      // og:type must be restated here or it goes missing on the homepage.
+      // these OG fields must be restated here or they go missing on the homepage.
       type: "website",
+      locale: locale === "fr" ? "fr_CA" : "en_US",
+      alternateLocale: locale === "fr" ? "en_US" : "fr_CA",
+      siteName: "GlobeVortex",
       url: `${SITE}/${locale}`,
       title: "GlobeVortex — Live World News",
       description:
