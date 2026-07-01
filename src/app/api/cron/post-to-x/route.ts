@@ -1,4 +1,4 @@
-import { TwitterApi } from "twitter-api-v2";
+import { ApiResponseError, TwitterApi } from "twitter-api-v2";
 import { getTopStories } from "@/lib/articles";
 import { getServiceRoleClient } from "@/lib/supabase";
 import { CATEGORIES } from "@/lib/categories";
@@ -41,19 +41,48 @@ function isAuthorized(req: Request): boolean {
   return req.headers.get("authorization") === `Bearer ${secret}`;
 }
 
+// The four OAuth 1.0a user-context credentials, keyed by their env var name so
+// missing ones can be named explicitly (never their values — those never get
+// logged or returned).
+const X_CREDENTIAL_ENV_VARS = [
+  "X_CONSUMER_KEY",
+  "X_CONSUMER_SECRET",
+  "X_ACCESS_TOKEN",
+  "X_ACCESS_TOKEN_SECRET",
+] as const;
+
+// Names (not values) of any of the four required X credentials that are absent
+// or empty. Empty array means all four are present.
+function missingXCredentials(): string[] {
+  return X_CREDENTIAL_ENV_VARS.filter((name) => !process.env[name]);
+}
+
 // OAuth 1.0a user-context client built from the four X app/user credentials.
-// Throws (rather than posting anonymously) if any secret is missing.
+// Callers must check missingXCredentials() first — this assumes all four exist.
 function getXClient(): TwitterApi {
-  const appKey = process.env.X_CONSUMER_KEY;
-  const appSecret = process.env.X_CONSUMER_SECRET;
-  const accessToken = process.env.X_ACCESS_TOKEN;
-  const accessSecret = process.env.X_ACCESS_TOKEN_SECRET;
-  if (!appKey || !appSecret || !accessToken || !accessSecret) {
-    throw new Error(
-      "Missing X credentials: X_CONSUMER_KEY, X_CONSUMER_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET are all required.",
-    );
+  return new TwitterApi({
+    appKey: process.env.X_CONSUMER_KEY!,
+    appSecret: process.env.X_CONSUMER_SECRET!,
+    accessToken: process.env.X_ACCESS_TOKEN!,
+    accessSecret: process.env.X_ACCESS_TOKEN_SECRET!,
+  });
+}
+
+// Pulls X's actual error payload (code, message, detail) out of a twitter-api-v2
+// exception so failures are debuggable instead of a bare "Request failed with
+// code 403". ApiResponseError carries the parsed response body in `.data`
+// (X's ErrorV1/ErrorV2 shape); anything else falls back to its message.
+function describeXError(error: unknown): { message: string; detail: unknown } {
+  if (error instanceof ApiResponseError) {
+    return {
+      message: `X API error ${error.code}: ${error.message}`,
+      detail: { code: error.code, data: error.data, rateLimit: error.rateLimit },
+    };
   }
-  return new TwitterApi({ appKey, appSecret, accessToken, accessSecret });
+  return {
+    message: error instanceof Error ? error.message : String(error),
+    detail: null,
+  };
 }
 
 function categoryEmoji(category: Article["category"]): string {
@@ -141,7 +170,24 @@ export async function GET(req: Request) {
       });
     }
 
-    // 3. Post the link-free headline, then reply with our article-page link.
+    // 3. Verify credentials are present before touching the X API, so a missing
+    //    secret produces a clear "which one" error instead of an opaque 403 from
+    //    OAuth signing with an undefined value. Names only — never values.
+    const missingCreds = missingXCredentials();
+    if (missingCreds.length > 0) {
+      console.error(`[cron/post-to-x] Missing X credentials: ${missingCreds.join(", ")}`);
+      return Response.json(
+        {
+          success: false,
+          error: `Missing X credentials: ${missingCreds.join(", ")}`,
+          missingCredentials: missingCreds,
+          duration: Date.now() - start,
+        },
+        { status: 500 },
+      );
+    }
+
+    // 4. Post the link-free headline, then reply with our article-page link.
     const client = getXClient();
     const rw = client.readWrite;
 
@@ -158,13 +204,14 @@ export async function GET(req: Request) {
       });
       replyTweetId = reply.data.id;
     } catch (replyError) {
+      const { message, detail } = describeXError(replyError);
       console.error(
-        `[cron/post-to-x] Headline tweet ${tweetId} posted but link reply failed for "${replyLink}":`,
-        replyError,
+        `[cron/post-to-x] Headline tweet ${tweetId} posted but link reply failed for "${replyLink}": ${message}`,
+        detail ?? replyError,
       );
     }
 
-    // 3. Record so we never repost. UNIQUE(article_url) is the final guard
+    // 5. Record so we never repost. UNIQUE(article_url) is the final guard
     //    against a double-post race; a conflict here means it's already logged.
     const { error: insertError } = await db.from("x_posts").insert({
       article_id: article.id,
@@ -192,12 +239,18 @@ export async function GET(req: Request) {
       duration: Date.now() - start,
     });
   } catch (error) {
-    // Do NOT retry in a loop — protect the budget. Log and exit non-200.
-    console.error("[cron/post-to-x] Run failed:", error);
+    // Do NOT retry in a loop — protect the budget. Log and exit non-200. For X
+    // API failures (e.g. the headline tweet itself), surface X's actual error
+    // payload (code/message/detail) rather than the generic
+    // "Request failed with code 403" — that's what makes the GitHub Actions log
+    // actionable instead of a dead end.
+    const { message, detail } = describeXError(error);
+    console.error("[cron/post-to-x] Run failed:", message, detail ?? error);
     return Response.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Post-to-X run failed",
+        error: message,
+        errorDetail: detail,
         duration: Date.now() - start,
       },
       { status: 500 },
