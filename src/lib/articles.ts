@@ -281,6 +281,22 @@ export async function getArticleIdsForSitemap(): Promise<
   return data as Pick<DbArticleRow, "id" | "created_at">[];
 }
 
+// Most recently ingested articles across both languages, for the RSS feed
+// (Google Discover "Follow" support). Ordered by created_at (ingestion time),
+// matching the sitemap's ordering — not published_at, so the feed always
+// reflects what GlobeVortex just added rather than the original publish date.
+export async function getRecentArticlesForFeed(
+  limit = 50,
+): Promise<Pick<DbArticleRow, "id" | "title" | "summary" | "created_at">[]> {
+  const { data, error } = await getServiceRoleClient()
+    .from("articles")
+    .select("id, title, summary, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(`Supabase feed read failed: ${error.message}`);
+  return data as Pick<DbArticleRow, "id" | "title" | "summary" | "created_at">[];
+}
+
 // Sibling articles in the same category, highest-importance first, excluding
 // the one being viewed. Powers the "related" rail on the article page. Selects
 // only the columns the related cards render — `url` is omitted because related

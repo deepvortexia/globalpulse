@@ -117,6 +117,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${playfairDisplay.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-gv-bg">
+        <link rel="alternate" type="application/rss+xml" title="GlobeVortex" href="/feed.xml" />
         {children}
         <CookieBanner />
         <AnalyticsWrapper />
