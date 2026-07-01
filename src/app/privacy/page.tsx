@@ -41,6 +41,7 @@ const COPY: Record<Language, LegalCopy> = {
         heading: "Data sharing",
         paragraphs: [
           "We do not sell, rent, or share your personal data with third parties. Vercel Inc. acts as our analytics processor under their own privacy policy (vercel.com/legal/privacy-policy).",
+          "Vercel Analytics data may be processed on servers located outside the EU/EEA, including in the United States, under appropriate safeguards (Standard Contractual Clauses) as described in Vercel's privacy policy (vercel.com/legal/privacy-policy).",
         ],
       },
       {
@@ -64,7 +65,7 @@ const COPY: Record<Language, LegalCopy> = {
       {
         heading: "Cookies",
         paragraphs: [
-          'GlobeVortex uses Vercel Analytics in privacy-first mode. If your browser signals a "Do Not Track" preference, analytics are suppressed. You can decline analytics via the cookie banner shown on your first visit.',
+          'GlobeVortex uses Vercel Analytics in privacy-first mode. If your browser signals a "Do Not Track" preference, analytics are suppressed. You can decline analytics tracking via the banner shown on your first visit.',
         ],
       },
       {
@@ -115,6 +116,7 @@ const COPY: Record<Language, LegalCopy> = {
         heading: "Partage des données",
         paragraphs: [
           "Nous ne vendons, ne louons ni ne partageons vos données personnelles avec des tiers. Vercel Inc. agit comme sous-traitant de nos analyses sous sa propre politique de confidentialité.",
+          "Les données de Vercel Analytics peuvent être traitées sur des serveurs situés hors de l'UE/EEE, y compris aux États-Unis, sous réserve de garanties appropriées (clauses contractuelles types) telles que décrites dans la politique de confidentialité de Vercel (vercel.com/legal/privacy-policy).",
         ],
       },
       {
@@ -138,7 +140,7 @@ const COPY: Record<Language, LegalCopy> = {
       {
         heading: "Cookies",
         paragraphs: [
-          'GlobeVortex utilise Vercel Analytics en mode respect de la vie privée. Si votre navigateur envoie un signal "Do Not Track", les analyses sont désactivées. Vous pouvez refuser les analyses via la bannière affichée lors de votre première visite.',
+          'GlobeVortex utilise Vercel Analytics en mode respect de la vie privée. Si votre navigateur envoie un signal "Do Not Track", les analyses sont désactivées. Vous pouvez refuser le suivi analytique via la bannière affichée lors de votre première visite.',
         ],
       },
       {
