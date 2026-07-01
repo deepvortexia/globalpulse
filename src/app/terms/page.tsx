@@ -47,6 +47,12 @@ const COPY: Record<Language, LegalCopy> = {
         ],
       },
       {
+        heading: "Minimum age",
+        paragraphs: [
+          "GlobeVortex is not directed at children under 13 (or under 16 in the EU/EEA). By using the service, you represent that you meet the applicable minimum age in your jurisdiction.",
+        ],
+      },
+      {
         heading: "Disclaimer of warranties",
         paragraphs: [
           'The service is provided "as is" without warranty of any kind. GlobeVortex is not liable for any damages arising from your use of the service.',
@@ -62,6 +68,12 @@ const COPY: Record<Language, LegalCopy> = {
         heading: "Governing law",
         paragraphs: [
           "These terms are governed by the laws of Quebec, Canada. Users outside Canada agree to submit to Quebec jurisdiction for any disputes.",
+        ],
+      },
+      {
+        heading: "Severability",
+        paragraphs: [
+          "If any provision of these Terms is found unenforceable or invalid, that provision will be limited or eliminated to the minimum extent necessary, and the remaining provisions will continue in full force and effect.",
         ],
       },
       {
@@ -118,6 +130,12 @@ const COPY: Record<Language, LegalCopy> = {
         ],
       },
       {
+        heading: "Âge minimum",
+        paragraphs: [
+          "GlobeVortex ne s'adresse pas aux enfants de moins de 13 ans (ou de moins de 16 ans dans l'UE/EEE). En utilisant le service, vous déclarez respecter l'âge minimum applicable dans votre juridiction.",
+        ],
+      },
+      {
         heading: "Absence de garantie",
         paragraphs: [
           'Le service est fourni "tel quel" sans garantie d\'aucune sorte. GlobeVortex n\'est pas responsable des dommages résultant de l\'utilisation du service.',
@@ -133,6 +151,12 @@ const COPY: Record<Language, LegalCopy> = {
         heading: "Droit applicable",
         paragraphs: [
           "Les présentes conditions sont régies par les lois du Québec, Canada. Les utilisateurs hors Canada acceptent la juridiction québécoise.",
+        ],
+      },
+      {
+        heading: "Divisibilité",
+        paragraphs: [
+          "Si une disposition des présentes conditions est jugée inapplicable ou invalide, cette disposition sera limitée ou éliminée dans la mesure minimale nécessaire, et les autres dispositions demeureront pleinement en vigueur.",
         ],
       },
       {
