@@ -21,6 +21,7 @@ interface Step {
 interface HowSection {
   heading: string;
   steps: Step[];
+  attribution: string;
 }
 
 interface Tech {
@@ -40,8 +41,13 @@ interface Copy {
   techTitle: string;
   tech: Tech[];
   creator: Section;
+  correction: {
+    before: string;
+    after: string;
+  };
   ctaHeading: string;
   cta: string;
+  lastReviewedPrefix: string;
 }
 
 const COPY: Record<Language, Copy> = {
@@ -80,6 +86,8 @@ const COPY: Record<Language, Copy> = {
           text: "Processed articles are stored and served instantly to the GlobeVortex interface — no timeouts, no delays. The feed refreshes continuously so the page always reflects the last 7 days of world news.",
         },
       ],
+      attribution:
+        "Every article links directly back to its original source. GlobeVortex doesn't claim authorship of the reporting — we collect, translate, and summarize it, and always credit the outlet that broke the story.",
     },
     techTitle: "Technologies",
     tech: [
@@ -112,12 +120,17 @@ const COPY: Record<Language, Copy> = {
     creator: {
       heading: "The Creator",
       body: [
-        "GlobeVortex is created by Yannick Boisclair under the DeepVortex brand — an independent studio crafting AI-first products that make information faster and clearer for everyone.",
+        "GlobeVortex is created by Yannick Boisclair, an independent developer based in Quebec, Canada, under the DeepVortex brand — a studio building AI-first products that make information faster and clearer for everyone.",
         "It is one expression of a simple idea: that artificial intelligence, used thoughtfully, can give anyone a clearer window on the world — regardless of language or location.",
       ],
     },
+    correction: {
+      before: "Spotted an error in a summary or category? Let us know at ",
+      after: " — corrections are typically applied within hours.",
+    },
     ctaHeading: "Ready to explore the world's news?",
     cta: "Enter GlobeVortex",
+    lastReviewedPrefix: "Page last reviewed:",
   },
   fr: {
     back: "← Retour aux actualités",
@@ -154,6 +167,8 @@ const COPY: Record<Language, Copy> = {
           text: "Les articles traités sont stockés et servis instantanément à l'interface GlobeVortex — sans timeout, sans délai. Le flux se rafraîchit en continu pour que la page reflète toujours les 7 derniers jours de l'actualité mondiale.",
         },
       ],
+      attribution:
+        "Chaque article renvoie directement vers sa source originale. GlobeVortex ne revendique pas la paternité du reportage — nous le rassemblons, le traduisons et le résumons, en créditant toujours le média qui a publié l'histoire en premier.",
     },
     techTitle: "Technologies",
     tech: [
@@ -186,12 +201,17 @@ const COPY: Record<Language, Copy> = {
     creator: {
       heading: "Le créateur",
       body: [
-        "GlobeVortex est créé par Yannick Boisclair sous la marque DeepVortex — un studio indépendant créant des produits IA-first qui rendent l'information plus rapide et plus claire pour tous.",
-        "C'est l'expression d'une idée simple : que l'intelligence artificielle, utilisée avec discernement, peut offrir à n'importe qui une fenêtre plus claire sur le monde — quelle que soit sa langue ou sa localisation.",
+        "GlobeVortex est créé par Yannick Boisclair, développeur indépendant basé au Québec, Canada, sous la marque DeepVortex — un studio qui conçoit des produits axés sur l'IA pour rendre l'information plus rapide et plus claire pour tous.",
+        "C'est l'expression d'une idée simple : utilisée avec discernement, l'intelligence artificielle peut offrir à quiconque une fenêtre plus claire sur le monde — peu importe la langue ou l'endroit.",
       ],
+    },
+    correction: {
+      before: "Vous avez repéré une erreur dans un résumé ou une catégorie ? Écrivez-nous à ",
+      after: " — les corrections sont généralement appliquées en quelques heures.",
     },
     ctaHeading: "Prêt à explorer l'actualité mondiale ?",
     cta: "Entrer dans GlobeVortex",
+    lastReviewedPrefix: "Page révisée le :",
   },
 };
 
@@ -295,8 +315,20 @@ export default function AboutContent() {
         {/* Creator */}
         <Prose section={t.creator} className="mt-16" />
 
+        {/* Correction / feedback */}
+        <p className="mt-16 text-center text-sm leading-relaxed text-gv-muted">
+          {t.correction.before}
+          <a
+            href="mailto:admin@globevortex.com"
+            className="text-gv-gold transition-colors hover:text-gv-gold-light"
+          >
+            admin@globevortex.com
+          </a>
+          {t.correction.after}
+        </p>
+
         {/* CTA back home */}
-        <section className="mt-20 flex flex-col items-center text-center">
+        <section className="mt-12 flex flex-col items-center text-center">
           <h2 className="font-display text-2xl font-bold text-white sm:text-3xl">
             {t.ctaHeading}
           </h2>
@@ -307,6 +339,15 @@ export default function AboutContent() {
             {t.cta}
           </Link>
         </section>
+
+        {/* Last reviewed */}
+        <p className="mt-16 text-center text-xs opacity-50">
+          {t.lastReviewedPrefix}{" "}
+          {new Intl.DateTimeFormat(language === "fr" ? "fr-CA" : "en-US", {
+            month: "long",
+            year: "numeric",
+          }).format(new Date())}
+        </p>
       </main>
 
       <Footer language={language} />
@@ -357,6 +398,7 @@ function HowItWorksSection({ section, className }: { section: HowSection; classN
           </li>
         ))}
       </ol>
+      <p className="mt-6 text-sm leading-relaxed text-gv-muted">{section.attribution}</p>
     </section>
   );
 }
