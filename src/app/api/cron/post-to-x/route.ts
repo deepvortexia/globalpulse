@@ -83,6 +83,12 @@ export async function GET(req: Request) {
     return Response.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
+  // Dry-run (?dryRun=1): run the full selection + formatting pipeline but skip
+  // the X post/reply and the x_posts insert. Lets you preview what would be
+  // tweeted without spending a post or marking the story as used. Trigger via
+  // the workflow's manual "Run workflow" button or a one-off curl.
+  const dryRun = /^(1|true)$/i.test(new URL(req.url).searchParams.get("dryRun") ?? "");
+
   try {
     const db = getServiceRoleClient();
 
@@ -93,6 +99,7 @@ export async function GET(req: Request) {
     if (!article) {
       return Response.json({
         success: true,
+        dryRun,
         posted: false,
         reason: stories.length === 0 ? "no top stories available" : "all top stories already posted",
         candidates: stories.length,
@@ -100,10 +107,28 @@ export async function GET(req: Request) {
       });
     }
 
-    // 2. Post the link-free headline, then reply with the bare URL.
+    // 2. Format the link-free headline. In dry-run we stop here and report what
+    //    would go out — no X calls, no x_posts write, story stays repostable.
+    const text = formatTweet(article);
+
+    if (dryRun) {
+      return Response.json({
+        success: true,
+        dryRun: true,
+        posted: false,
+        articleId: article.id,
+        articleUrl: article.url,
+        wouldTweet: text,
+        tweetLength: text.length,
+        wouldReplyWith: article.url,
+        candidates: stories.length,
+        duration: Date.now() - start,
+      });
+    }
+
+    // 3. Post the link-free headline, then reply with the bare URL.
     const client = getXClient();
     const rw = client.readWrite;
-    const text = formatTweet(article);
 
     const tweet = await rw.v2.tweet(text);
     const tweetId = tweet.data.id;

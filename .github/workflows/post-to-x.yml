@@ -16,7 +16,12 @@ on:
     - cron: "0 18 * * *" #  2pm EDT / 1pm EST
     - cron: "0 21 * * *" #  5pm EDT / 4pm EST
     - cron: "0 0 * * *"  #  8pm EDT / 7pm EST (previous day UTC)
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Preview only — pick & format the tweet, but do not post to X"
+        type: boolean
+        default: false
 
 # Never let two posting runs overlap (would risk tweeting two stories at once).
 concurrency:
@@ -29,9 +34,14 @@ jobs:
     steps:
       - name: Trigger /api/cron/post-to-x
         run: |
+          url="https://globevortex.com/api/cron/post-to-x"
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            url="$url?dryRun=1"
+            echo "DRY RUN — no tweet will be posted"
+          fi
           code=$(curl -s -o response.json -w "%{http_code}" --max-time 60 \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            "https://globevortex.com/api/cron/post-to-x")
+            "$url")
           echo "HTTP $code"
           cat response.json || true
           echo
