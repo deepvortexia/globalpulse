@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { fetchAllFeedsRaw, inferCategory } from "@/lib/rss-fetcher";
 import { getServiceRoleClient } from "@/lib/supabase";
+import { submitToIndexNow } from "@/lib/indexnow";
 import type { Article, CategoryId } from "@/types";
 
 // Background job — runs on a schedule (see vercel.json), never user-facing.
@@ -222,9 +223,16 @@ export async function GET(req: Request) {
       const { data, error } = await db
         .from("articles")
         .upsert(rows, { onConflict: "url", ignoreDuplicates: true })
-        .select("url");
+        .select("id, url");
       if (error) throw new Error(`Supabase insert failed: ${error.message}`);
       inserted = data?.length ?? 0;
+
+      // Notify IndexNow once per run (not per article) so Bing/Yandex/Seznam/
+      // Naver can crawl new articles immediately. Never fails the cron.
+      if (data && data.length > 0) {
+        const articleUrls = data.map((row: { id: string }) => `https://globevortex.com/article/${row.id}`);
+        await submitToIndexNow(articleUrls);
+      }
     }
 
     // 6. Purge articles older than 7 days. Non-fatal: a cleanup failure must
