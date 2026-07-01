@@ -13,13 +13,26 @@ export const maxDuration = 60;
 
 // X's 2026 algorithm suppresses tweets with external links for non-Premium
 // accounts. Workaround: tweet the headline as link-free text, then reply to that
-// tweet with the bare article URL (replies are far less suppressed). This is the
-// documented 2-call pattern: POST /2/tweets, then POST /2/tweets with
+// tweet with our own article-page link (replies are far less suppressed, and the
+// link drives traffic to GlobeVortex, not the publisher). This is the documented
+// 2-call pattern: POST /2/tweets, then POST /2/tweets with
 // reply.in_reply_to_tweet_id. Auth is OAuth 1.0a user-context (posts AS the
 // account), which twitter-api-v2 handles natively from the four X_* secrets.
 
 const TWEET_MAX = 280;
 const ELLIPSIS = "…";
+
+// Our own site, so the reply link drives traffic to GlobeVortex's article page
+// (which carries the "read original source" outbound link) rather than straight
+// to the publisher. Must match the canonical pattern in
+// src/app/article/[slug]/page.tsx: `${SITE}/article/${article.id}`.
+const SITE = "https://globevortex.com";
+
+// Internal article-page URL for an article — never the external source
+// (`article.url`), which only appears as the outbound link on that page.
+function articlePageUrl(article: Article): string {
+  return `${SITE}/article/${article.id}`;
+}
 
 function isAuthorized(req: Request): boolean {
   const secret = process.env.CRON_SECRET;
@@ -107,9 +120,11 @@ export async function GET(req: Request) {
       });
     }
 
-    // 2. Format the link-free headline. In dry-run we stop here and report what
-    //    would go out — no X calls, no x_posts write, story stays repostable.
+    // 2. Format the link-free headline + our internal article-page link. In
+    //    dry-run we stop here and report what would go out — no X calls, no
+    //    x_posts write, story stays repostable.
     const text = formatTweet(article);
+    const replyLink = articlePageUrl(article);
 
     if (dryRun) {
       return Response.json({
@@ -120,13 +135,13 @@ export async function GET(req: Request) {
         articleUrl: article.url,
         wouldTweet: text,
         tweetLength: text.length,
-        wouldReplyWith: article.url,
+        wouldReplyWith: replyLink,
         candidates: stories.length,
         duration: Date.now() - start,
       });
     }
 
-    // 3. Post the link-free headline, then reply with the bare URL.
+    // 3. Post the link-free headline, then reply with our article-page link.
     const client = getXClient();
     const rw = client.readWrite;
 
@@ -138,13 +153,13 @@ export async function GET(req: Request) {
     // rather than reposting the headline on the next run.
     let replyTweetId: string | null = null;
     try {
-      const reply = await rw.v2.tweet(article.url, {
+      const reply = await rw.v2.tweet(replyLink, {
         reply: { in_reply_to_tweet_id: tweetId },
       });
       replyTweetId = reply.data.id;
     } catch (replyError) {
       console.error(
-        `[cron/post-to-x] Headline tweet ${tweetId} posted but link reply failed for "${article.url}":`,
+        `[cron/post-to-x] Headline tweet ${tweetId} posted but link reply failed for "${replyLink}":`,
         replyError,
       );
     }
