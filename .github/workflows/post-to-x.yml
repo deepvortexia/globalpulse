@@ -1,0 +1,38 @@
+name: Post to X (5x/day)
+
+# Drives the X (Twitter) posting job. Each run tweets one EN Top Story as a
+# link-free headline, then replies with the article URL (link-suppression
+# workaround). The X credentials live in Vercel; this workflow only triggers the
+# secured endpoint, so the only secret it needs is CRON_SECRET (already used by
+# fetch-news). Schedule is best-effort — GitHub may delay under load.
+#
+# Times are UTC. These target ~8am–8pm Eastern (America/Toronto): during EDT
+# (summer) they fire at 8am, 11am, 2pm, 5pm, 8pm ET; during EST (winter) each
+# lands one hour later in local time (9am–9pm ET), since GitHub cron is fixed UTC.
+on:
+  schedule:
+    - cron: "0 12 * * *" #  8am EDT / 7am EST
+    - cron: "0 15 * * *" # 11am EDT / 10am EST
+    - cron: "0 18 * * *" #  2pm EDT / 1pm EST
+    - cron: "0 21 * * *" #  5pm EDT / 4pm EST
+    - cron: "0 0 * * *"  #  8pm EDT / 7pm EST (previous day UTC)
+  workflow_dispatch: {}
+
+# Never let two posting runs overlap (would risk tweeting two stories at once).
+concurrency:
+  group: post-to-x
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger /api/cron/post-to-x
+        run: |
+          code=$(curl -s -o response.json -w "%{http_code}" --max-time 60 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://globevortex.com/api/cron/post-to-x")
+          echo "HTTP $code"
+          cat response.json || true
+          echo
+          test "$code" = "200"
