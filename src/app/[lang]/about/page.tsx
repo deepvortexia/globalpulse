@@ -24,6 +24,8 @@ export async function generateMetadata({ params }: AboutPageProps): Promise<Meta
       },
     },
     openGraph: {
+      // Page-level openGraph replaces the root layout's, so restate og:type.
+      type: "website",
       url: `${SITE}/${locale}/about`,
       title: "About GlobeVortex — AI-Powered Bilingual News Aggregator",
       description:
