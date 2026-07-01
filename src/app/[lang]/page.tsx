@@ -1,24 +1,39 @@
 import type { Metadata } from "next";
 import { getArticles, getTopStoriesByLanguage } from "@/lib/articles";
 import type { TopStoriesByLanguage } from "@/lib/articles";
-import type { Article } from "@/types";
+import type { Article, Language } from "@/types";
 import NewsBoard from "@/components/NewsBoard";
 
-export const metadata: Metadata = {
-  title: "GlobeVortex — Live World News · AI-Powered Bilingual Aggregator",
-  description:
-    "Follow the world's most important stories live — AI-curated international news in English and French from 50+ trusted global sources including BBC, Le Monde, CNN, Al Jazeera, Radio-Canada, RFI and more.",
-  alternates: {
-    canonical: "https://globevortex.com",
-  },
-  openGraph: {
-    url: "https://globevortex.com",
-    title: "GlobeVortex — Live World News",
-    description:
-      "AI-curated international news in English and French from 50+ trusted global sources.",
-    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "GlobeVortex" }],
-  },
+const SITE = "https://globevortex.com";
+
+type HomeProps = {
+  params: Promise<{ lang: string }>;
 };
+
+export async function generateMetadata({ params }: HomeProps): Promise<Metadata> {
+  const { lang } = await params;
+  const locale = lang === "fr" ? "fr" : "en";
+  return {
+    title: "GlobeVortex — Live World News · AI-Powered Bilingual Aggregator",
+    description:
+      "Follow the world's most important stories live — AI-curated international news in English and French from 50+ trusted global sources including BBC, Le Monde, CNN, Al Jazeera, Radio-Canada, RFI and more.",
+    alternates: {
+      canonical: `${SITE}/${locale}`,
+      languages: {
+        en: `${SITE}/en`,
+        fr: `${SITE}/fr`,
+        "x-default": `${SITE}/en`,
+      },
+    },
+    openGraph: {
+      url: `${SITE}/${locale}`,
+      title: "GlobeVortex — Live World News",
+      description:
+        "AI-curated international news in English and French from 50+ trusted global sources.",
+      images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "GlobeVortex" }],
+    },
+  };
+}
 
 // ISR: HTML is server-rendered with data baked in and revalidated every 60s.
 // Articles are read from Supabase (populated by the /api/cron/fetch-news
@@ -30,13 +45,15 @@ export const revalidate = 60;
 const HOME_POOL_SIZE = 1000;
 const HOME_WINDOW_HOURS = 168;
 
-export default async function Home() {
+export default async function Home({ params }: HomeProps) {
+  const { lang } = await params;
+  const language = (lang === "fr" ? "fr" : "en") as Language;
+
   let articles: Article[] = [];
-  // Top Stories is a virtual category, and the active language + category both
-  // live in client state inside NewsBoard, so we can't branch the fetch on them
-  // here. Instead we prefetch the high-importance set for BOTH languages (each a
-  // full 10-story rail) alongside the main pool and hand them to NewsBoard, which
-  // swaps in the matching-language array when the "top" pill is selected.
+  // Top Stories is a virtual category, and the active category lives in client
+  // state inside NewsBoard, so we prefetch the high-importance set for BOTH
+  // languages (each a full rail) alongside the main pool and hand them to
+  // NewsBoard, which swaps in the matching-language array when "top" is picked.
   let topStories: TopStoriesByLanguage = { en: [], fr: [] };
   let error: string | null = null;
 
@@ -60,7 +77,7 @@ export default async function Home() {
       {
         "@type": "WebSite",
         "@id": "https://globevortex.com/#website",
-        "url": "https://globevortex.com",
+        "url": `${SITE}/${language}`,
         "name": "GlobeVortex",
         "description": "Bilingual FR/EN AI-powered international news aggregator — world news summarized by Claude AI from 50+ trusted sources.",
         "inLanguage": ["en", "fr"],
@@ -69,7 +86,7 @@ export default async function Home() {
         "@type": "NewsMediaOrganization",
         "@id": "https://globevortex.com/#organization",
         "name": "GlobeVortex",
-        "url": "https://globevortex.com",
+        "url": SITE,
         "logo": {
           "@type": "ImageObject",
           "url": "https://globevortex.com/logo.png",
@@ -83,7 +100,7 @@ export default async function Home() {
         },
         "description":
           "AI-powered bilingual news aggregator covering world affairs, politics, economy, science, climate, health, culture and sports.",
-        "publishingPrinciples": "https://globevortex.com/about",
+        "publishingPrinciples": `${SITE}/${language}/about`,
       },
     ],
   };
@@ -94,7 +111,12 @@ export default async function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <NewsBoard articles={articles} topStories={topStories} error={error} />
+      <NewsBoard
+        articles={articles}
+        topStories={topStories}
+        error={error}
+        initialLanguage={language}
+      />
     </>
   );
 }

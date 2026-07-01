@@ -1,12 +1,7 @@
-"use client";
-
-import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { Language } from "@/types";
 import Footer from "@/components/Footer";
-
-const LANGUAGES: Language[] = ["fr", "en"];
 
 interface Section {
   heading: string;
@@ -215,16 +210,16 @@ const COPY: Record<Language, Copy> = {
   },
 };
 
-export default function AboutContent() {
-  const [language, setLanguage] = useState<Language>("en");
+export default function AboutContent({ language }: { language: Language }) {
   const t = COPY[language];
+  const other: Language = language === "fr" ? "en" : "fr";
 
   return (
     <div className="flex min-h-screen flex-col text-white">
-      {/* Lightweight header: logo + back link + language toggle */}
+      {/* Lightweight header: logo + back link + locale switch link */}
       <header className="sticky top-0 z-[60] border-b border-[rgba(201,168,76,0.2)] bg-gv-bg/90 backdrop-blur-md">
         <div className="mx-auto flex h-12 max-w-7xl items-center justify-between px-4 sm:h-16 sm:px-6">
-          <Link href="/" className="flex items-center gap-2 sm:gap-3">
+          <Link href={`/${language}`} className="flex items-center gap-2 sm:gap-3">
             <Image
               src="/logo.png"
               alt="GlobeVortex logo"
@@ -239,30 +234,22 @@ export default function AboutContent() {
             </span>
           </Link>
 
-          <div className="flex items-center rounded-full border border-gv-border p-0.5">
-            {LANGUAGES.map((lang) => {
-              const active = lang === language;
-              return (
-                <button
-                  key={lang}
-                  type="button"
-                  onClick={() => setLanguage(lang)}
-                  aria-pressed={active}
-                  className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase transition-colors sm:px-3 sm:text-xs ${
-                    active ? "bg-gv-gold text-gv-bg" : "text-gv-muted hover:text-white"
-                  }`}
-                >
-                  {lang}
-                </button>
-              );
-            })}
-          </div>
+          {/* Locale switch: server-rendered link to the same page in the other
+              language (replaces the old client-side toggle). */}
+          <Link
+            href={`/${other}/about`}
+            hrefLang={other}
+            aria-label={other === "fr" ? "Voir en français" : "View in English"}
+            className="rounded-full border border-gv-border px-3 py-1 text-[11px] font-semibold uppercase text-gv-muted transition-colors hover:text-white sm:text-xs"
+          >
+            {other}
+          </Link>
         </div>
       </header>
 
       <main className="mx-auto w-full max-w-4xl flex-1 px-4 pb-20 pt-10 sm:px-6">
         <Link
-          href="/"
+          href={`/${language}`}
           className="text-sm text-gv-muted transition-colors hover:text-gv-gold"
         >
           {t.back}
@@ -333,7 +320,7 @@ export default function AboutContent() {
             {t.ctaHeading}
           </h2>
           <Link
-            href="/"
+            href={`/${language}`}
             className="mt-8 inline-flex items-center rounded-full bg-gv-gold px-8 py-3 text-sm font-bold uppercase tracking-wider text-gv-bg shadow-[0_0_24px_rgba(201,168,76,0.35)] transition-colors hover:bg-gv-gold-light"
           >
             {t.cta}

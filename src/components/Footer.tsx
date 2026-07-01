@@ -90,15 +90,15 @@ export default function Footer({ language }: FooterProps) {
             {text.contact}
           </a>
           <span aria-hidden className="text-xs opacity-50">·</span>
-          <Link href="/about" className="transition-colors hover:text-gv-gold">
+          <Link href={`/${language}/about`} className="transition-colors hover:text-gv-gold">
             {text.about}
           </Link>
           <span aria-hidden className="text-xs opacity-50">·</span>
-          <Link href="/privacy" className="text-xs transition-colors hover:text-gv-gold">
+          <Link href={`/${language}/privacy`} className="text-xs transition-colors hover:text-gv-gold">
             {text.privacy}
           </Link>
           <span aria-hidden className="text-xs opacity-50">·</span>
-          <Link href="/terms" className="text-xs transition-colors hover:text-gv-gold">
+          <Link href={`/${language}/terms`} className="text-xs transition-colors hover:text-gv-gold">
             {text.terms}
           </Link>
         </div>

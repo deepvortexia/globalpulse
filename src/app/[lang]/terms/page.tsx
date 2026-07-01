@@ -2,13 +2,30 @@ import type { Metadata } from "next";
 import type { Language } from "@/types";
 import LegalDoc, { type LegalCopy } from "@/components/LegalDoc";
 
-export const metadata: Metadata = {
-  title: "Terms of Service",
-  description:
-    "GlobeVortex terms of service — news aggregator that summarizes and links to third-party publishers. Governed by the laws of Quebec, Canada.",
-  alternates: { canonical: "https://globevortex.com/terms" },
-  robots: { index: true, follow: true },
+const SITE = "https://globevortex.com";
+
+type TermsPageProps = {
+  params: Promise<{ lang: string }>;
 };
+
+export async function generateMetadata({ params }: TermsPageProps): Promise<Metadata> {
+  const { lang } = await params;
+  const locale = lang === "fr" ? "fr" : "en";
+  return {
+    title: "Terms of Service",
+    description:
+      "GlobeVortex terms of service — news aggregator that summarizes and links to third-party publishers. Governed by the laws of Quebec, Canada.",
+    alternates: {
+      canonical: `${SITE}/${locale}/terms`,
+      languages: {
+        en: `${SITE}/en/terms`,
+        fr: `${SITE}/fr/terms`,
+        "x-default": `${SITE}/en/terms`,
+      },
+    },
+    robots: { index: true, follow: true },
+  };
+}
 
 const COPY: Record<Language, LegalCopy> = {
   en: {
@@ -167,6 +184,8 @@ const COPY: Record<Language, LegalCopy> = {
   },
 };
 
-export default function TermsPage() {
-  return <LegalDoc copy={COPY} />;
+export default async function TermsPage({ params }: TermsPageProps) {
+  const { lang } = await params;
+  const language = (lang === "fr" ? "fr" : "en") as Language;
+  return <LegalDoc copy={COPY[language]} language={language} path="terms" />;
 }

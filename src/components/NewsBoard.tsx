@@ -17,6 +17,10 @@ interface NewsBoardProps {
   // language), so selecting "top" just reads the active language's array.
   topStories?: Record<Language, Article[]>;
   error?: string | null;
+  // Seeds the language toggle from the URL locale (/en or /fr) so the server
+  // render matches the locale. The toggle still works client-side for now;
+  // Phase 3 will convert it to locale navigation.
+  initialLanguage?: Language;
 }
 
 const UI_TEXT: Record<
@@ -50,8 +54,8 @@ const ARTICLES_PER_PAGE = 24;
 // Client boundary that owns the language toggle and everything that reacts to
 // it (header, heading, grid). Articles arrive pre-fetched from the Server
 // Component as props — no data fetching happens here.
-export default function NewsBoard({ articles, topStories = { en: [], fr: [] }, error }: NewsBoardProps) {
-  const [language, setLanguage] = useState<Language>("en");
+export default function NewsBoard({ articles, topStories = { en: [], fr: [] }, error, initialLanguage = "en" }: NewsBoardProps) {
+  const [language, setLanguage] = useState<Language>(initialLanguage);
   const [categoryId, setCategoryId] = useState<CategoryId>("top");
   const [menuOpen, setMenuOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);

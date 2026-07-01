@@ -1,12 +1,7 @@
-"use client";
-
-import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { Language } from "@/types";
 import Footer from "@/components/Footer";
-
-const LANGUAGES: Language[] = ["fr", "en"];
 
 export interface LegalSection {
   heading: string;
@@ -21,19 +16,27 @@ export interface LegalCopy {
   sections: LegalSection[];
 }
 
-// Shared layout for the Privacy / Terms pages. Mirrors AboutContent: a sticky
-// header with the logo + EN/FR toggle, a centered prose column, and the Footer.
-// Copy arrives as a serializable prop from the (server) page so each legal doc
-// keeps its own text but shares one presentation.
-export default function LegalDoc({ copy }: { copy: Record<Language, LegalCopy> }) {
-  const [language, setLanguage] = useState<Language>("en");
-  const t = copy[language];
+// Shared layout for the Privacy / Terms pages. Server-rendered for a single
+// locale (the FR/EN toggle is gone — each locale is its own URL now). `copy` is
+// the already-selected locale's text; `path` ("privacy" | "terms") builds the
+// locale-switch link to the same doc in the other language.
+export default function LegalDoc({
+  copy,
+  language,
+  path,
+}: {
+  copy: LegalCopy;
+  language: Language;
+  path: "privacy" | "terms";
+}) {
+  const t = copy;
+  const other: Language = language === "fr" ? "en" : "fr";
 
   return (
     <div className="flex min-h-screen flex-col text-white">
       <header className="sticky top-0 z-[60] border-b border-[rgba(201,168,76,0.2)] bg-gv-bg/90 backdrop-blur-md">
         <div className="mx-auto flex h-12 max-w-7xl items-center justify-between px-4 sm:h-16 sm:px-6">
-          <Link href="/" className="flex items-center gap-2 sm:gap-3">
+          <Link href={`/${language}`} className="flex items-center gap-2 sm:gap-3">
             <Image
               src="/logo.png"
               alt="GlobeVortex logo"
@@ -48,30 +51,21 @@ export default function LegalDoc({ copy }: { copy: Record<Language, LegalCopy> }
             </span>
           </Link>
 
-          <div className="flex items-center rounded-full border border-gv-border p-0.5">
-            {LANGUAGES.map((lang) => {
-              const active = lang === language;
-              return (
-                <button
-                  key={lang}
-                  type="button"
-                  onClick={() => setLanguage(lang)}
-                  aria-pressed={active}
-                  className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase transition-colors sm:px-3 sm:text-xs ${
-                    active ? "bg-gv-gold text-gv-bg" : "text-gv-muted hover:text-white"
-                  }`}
-                >
-                  {lang}
-                </button>
-              );
-            })}
-          </div>
+          {/* Locale switch link (replaces the old client-side toggle). */}
+          <Link
+            href={`/${other}/${path}`}
+            hrefLang={other}
+            aria-label={other === "fr" ? "Voir en français" : "View in English"}
+            className="rounded-full border border-gv-border px-3 py-1 text-[11px] font-semibold uppercase text-gv-muted transition-colors hover:text-white sm:text-xs"
+          >
+            {other}
+          </Link>
         </div>
       </header>
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 pb-20 pt-10 sm:px-6">
         <Link
-          href="/"
+          href={`/${language}`}
           className="text-sm text-gv-muted transition-colors hover:text-gv-gold"
         >
           {t.back}
