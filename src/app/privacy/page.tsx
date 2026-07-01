@@ -19,7 +19,7 @@ const COPY: Record<Language, LegalCopy> = {
       {
         heading: "Who we are",
         paragraphs: [
-          "GlobeVortex (globevortex.com) is a bilingual news aggregator operated by Yannick Boisclair, Quebec, Canada. Contact: admin@globevortex.com",
+          "GlobeVortex (globevortex.com) is a bilingual news aggregator created by Yannick Boisclair, Quebec, Canada. Contact: admin@globevortex.com",
         ],
       },
       {
@@ -94,7 +94,7 @@ const COPY: Record<Language, LegalCopy> = {
       {
         heading: "Qui sommes-nous",
         paragraphs: [
-          "GlobeVortex (globevortex.com) est un agrégateur de nouvelles bilingue exploité par Yannick Boisclair, Québec, Canada. Contact : admin@globevortex.com",
+          "GlobeVortex (globevortex.com) est un agrégateur de nouvelles bilingue créé par Yannick Boisclair, Québec, Canada. Contact : admin@globevortex.com",
         ],
       },
       {
