@@ -6,9 +6,10 @@ import { getArticleBySlug, getRelatedArticles } from "@/lib/articles";
 import { categoryLabel } from "@/lib/categories";
 import type { CategoryId, Language } from "@/types";
 
-// ISR: article pages are static between hourly revalidations. Content rarely
-// changes after ingestion, so an hour keeps them cheap and crawler-friendly.
-export const revalidate = 3600;
+// ISR: article pages are static between daily revalidations. Content is
+// immutable after ingestion (and articles are purged after 7 days), so a 24h
+// window keeps them cheap and crawler-friendly with no meaningful staleness.
+export const revalidate = 86400;
 
 // Next 16: route params arrive as a Promise and must be awaited.
 type ArticlePageProps = {

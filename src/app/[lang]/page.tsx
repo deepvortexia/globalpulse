@@ -41,10 +41,10 @@ export async function generateMetadata({ params }: HomeProps): Promise<Metadata>
   };
 }
 
-// ISR: HTML is server-rendered with data baked in and revalidated every 60s.
+// ISR: HTML is server-rendered with data baked in and revalidated every 5 min.
 // Articles are read from Supabase (populated by the /api/cron/fetch-news
 // background job) rather than fetched live from RSS — instant page loads.
-export const revalidate = 60;
+export const revalidate = 300;
 
 // NewsBoard filters by language + category and paginates entirely client-side,
 // so hand it a broad pool spanning both languages and every category.
