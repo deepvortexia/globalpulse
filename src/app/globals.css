@@ -155,6 +155,152 @@ body::before {
   }
 }
 
+/* ── 2026 Year in Review: vortex parallax ──────────────────────────────────
+   All layers read --gvs (window.scrollY, unitless) set once per frame on
+   .gv-vortex-root by VortexJourney.tsx. Only transform/opacity animate, so
+   every layer stays on the compositor. */
+.gv-vortex-root {
+  --gvs: 0;
+}
+
+.gv-vortex-bg {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Soft gold core the traveller falls toward; breathes slightly with scroll. */
+.gv-vortex-glow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 120vmax;
+  height: 120vmax;
+  transform: translate(-50%, -50%) scale(min(1.35, calc(1 + var(--gvs) * 0.00004)));
+  background: radial-gradient(
+    circle,
+    rgba(201, 168, 76, 0.14) 0%,
+    rgba(201, 168, 76, 0.05) 22%,
+    transparent 55%
+  );
+}
+
+/* Spiral ring layer: faint concentric gold rings that rotate with scroll —
+   the slowest layer, evoking the vortex logo. A second, counter-rotating
+   copy adds depth without extra paint cost. */
+.gv-vortex-spiral {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 160vmax;
+  height: 160vmax;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) rotate(calc(var(--gvs) * 0.018deg));
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(201, 168, 76, 0.05) 0deg 4deg,
+    transparent 4deg 30deg
+  );
+  -webkit-mask-image: radial-gradient(circle, transparent 6%, black 18%, black 45%, transparent 62%);
+  mask-image: radial-gradient(circle, transparent 6%, black 18%, black 45%, transparent 62%);
+}
+
+.gv-vortex-spiral--reverse {
+  width: 120vmax;
+  height: 120vmax;
+  transform: translate(-50%, -50%) rotate(calc(var(--gvs) * -0.03deg));
+  background: repeating-conic-gradient(
+    from 15deg,
+    rgba(232, 201, 109, 0.04) 0deg 2deg,
+    transparent 2deg 22deg
+  );
+}
+
+/* Particle depth layers: tall sheets translated at a fraction of scroll speed
+   (far slower than near), so foreground chapters fly past them. */
+.gv-particles {
+  position: absolute;
+  inset: -20% 0;
+}
+
+.gv-particles--far {
+  transform: translateY(calc(var(--gvs) * -0.08px));
+}
+
+.gv-particles--near {
+  transform: translateY(calc(var(--gvs) * -0.22px));
+}
+
+.gv-particle {
+  position: absolute;
+  border-radius: 9999px;
+  background: #e8c96d;
+  box-shadow: 0 0 6px rgba(201, 168, 76, 0.8);
+  animation: gv-twinkle 6s ease-in-out infinite;
+}
+
+@keyframes gv-twinkle {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
+}
+
+/* Hero year numeral + scroll hint. */
+.gv-year-title {
+  font-size: clamp(6rem, 22vw, 14rem);
+  line-height: 1;
+  text-shadow: 0 0 60px rgba(201, 168, 76, 0.35);
+}
+
+.gv-scroll-hint {
+  animation: gv-hint-bob 2.2s ease-in-out infinite;
+}
+
+@keyframes gv-hint-bob {
+  0%, 100% { transform: translateY(0); opacity: 0.65; }
+  50% { transform: translateY(8px); opacity: 1; }
+}
+
+/* Chapter reveal (IntersectionObserver adds .gv-cr-in). Separate from the
+   NewsGrid .gv-reveal pair so the two effects stay independently tunable. */
+.gv-cr {
+  opacity: 0;
+  transform: translateY(48px) scale(0.98);
+  transition:
+    opacity 0.7s ease-out,
+    transform 0.7s ease-out;
+}
+
+.gv-cr.gv-cr-in {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gv-vortex-glow,
+  .gv-vortex-spiral,
+  .gv-vortex-spiral--reverse {
+    transform: translate(-50%, -50%);
+  }
+
+  .gv-particles--far,
+  .gv-particles--near {
+    transform: none;
+  }
+
+  .gv-particle,
+  .gv-scroll-hint {
+    animation: none;
+  }
+
+  .gv-cr {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
 /* Hide the scrollbar on the horizontal category pill row. */
 .no-scrollbar {
   -ms-overflow-style: none;

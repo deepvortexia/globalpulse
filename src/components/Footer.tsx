@@ -14,6 +14,7 @@ const footerText: Record<
     soon: string;
     contact: string;
     about: string;
+    yearInReview: string;
     privacy: string;
     terms: string;
     credit: string;
@@ -26,6 +27,7 @@ const footerText: Record<
     soon: "Coming soon",
     contact: "Contact",
     about: "About",
+    yearInReview: "2026 in Review",
     privacy: "Privacy Policy",
     terms: "Terms",
     credit: "Created by Yannick Boisclair · Powered by Claude (Anthropic)",
@@ -37,6 +39,7 @@ const footerText: Record<
     soon: "Prochainement",
     contact: "Contact",
     about: "À propos",
+    yearInReview: "2026 en revue",
     privacy: "Politique de confidentialité",
     terms: "Conditions",
     credit: "Créé par Yannick Boisclair · Propulsé par Claude (Anthropic)",
@@ -92,6 +95,10 @@ export default function Footer({ language }: FooterProps) {
           <span aria-hidden className="text-xs opacity-50">·</span>
           <Link href={`/${language}/about`} className="transition-colors hover:text-gv-gold">
             {text.about}
+          </Link>
+          <span aria-hidden className="text-xs opacity-50">·</span>
+          <Link href={`/${language}/2026`} className="transition-colors hover:text-gv-gold">
+            {text.yearInReview}
           </Link>
           <span aria-hidden className="text-xs opacity-50">·</span>
           <Link href={`/${language}/privacy`} className="text-xs transition-colors hover:text-gv-gold">

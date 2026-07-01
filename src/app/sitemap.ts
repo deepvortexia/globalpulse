@@ -8,6 +8,7 @@ const SITE = 'https://globevortex.com';
 const SHARED_PAGES: { path: string; changeFrequency: 'daily' | 'monthly'; priority: number }[] = [
   { path: '', changeFrequency: 'daily', priority: 1.0 },
   { path: '/about', changeFrequency: 'monthly', priority: 0.5 },
+  { path: '/2026', changeFrequency: 'monthly', priority: 0.7 },
   { path: '/privacy', changeFrequency: 'monthly', priority: 0.3 },
   { path: '/terms', changeFrequency: 'monthly', priority: 0.3 },
 ];
