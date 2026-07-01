@@ -22,7 +22,7 @@ const footerText: Record<
 > = {
   en: {
     tagline: "World news powered by AI",
-    rights: "© 2025 DeepVortex. All rights reserved.",
+    rights: "© {year} DeepVortex. All rights reserved.",
     soon: "Coming soon",
     contact: "Contact",
     about: "About",
@@ -33,7 +33,7 @@ const footerText: Record<
   },
   fr: {
     tagline: "L'actualité mondiale propulsée par l'IA",
-    rights: "© 2025 DeepVortex. Tous droits réservés.",
+    rights: "© {year} DeepVortex. Tous droits réservés.",
     soon: "Prochainement",
     contact: "Contact",
     about: "À propos",
@@ -56,6 +56,7 @@ function XLogo() {
 
 export default function Footer({ language }: FooterProps) {
   const text = footerText[language];
+  const rights = text.rights.replace("{year}", String(new Date().getFullYear()));
 
   return (
     <footer
@@ -88,6 +89,7 @@ export default function Footer({ language }: FooterProps) {
           <a href="mailto:admin@globevortex.com" className="transition-colors hover:text-gv-gold">
             {text.contact}
           </a>
+          <span aria-hidden className="text-xs opacity-50">·</span>
           <Link href="/about" className="transition-colors hover:text-gv-gold">
             {text.about}
           </Link>
@@ -113,7 +115,7 @@ export default function Footer({ language }: FooterProps) {
         </a>
 
         {/* Copyright */}
-        <p className="text-center text-xs opacity-60">{text.rights}</p>
+        <p className="text-center text-xs opacity-60">{rights}</p>
         <p className="text-center text-xs opacity-50">{text.credit}</p>
       </div>
     </footer>
