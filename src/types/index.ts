@@ -37,13 +37,6 @@ export interface Article {
   isBreaking?: boolean;
 }
 
-export interface Summary {
-  summaryEn: string;
-  summaryFr: string;
-  category: string;
-  tags: string[];
-}
-
 export type ApiResponse<T> =
   | { success: true; data: T }
   | { success: false; error: string };

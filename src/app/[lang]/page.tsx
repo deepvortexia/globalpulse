@@ -115,7 +115,7 @@ export default async function Home({ params }: HomeProps) {
         articles={articles}
         topStories={topStories}
         error={error}
-        initialLanguage={language}
+        language={language}
       />
     </>
   );

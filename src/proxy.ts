@@ -10,6 +10,12 @@ const LOCALES = ["en", "fr"] as const;
 type Locale = (typeof LOCALES)[number];
 const DEFAULT_LOCALE: Locale = "en";
 
+// Pre-migration indexed pages with a single stable counterpart. These get a
+// permanent (301) redirect to the default-locale version to consolidate SEO
+// equity onto the new URL. A 301 is cached, so its target must be fixed — it
+// can't depend on Accept-Language (that's why `/` stays a per-user 307 below).
+const LEGACY_PAGES = new Set(["/about", "/privacy", "/terms"]);
+
 // Minimal Accept-Language negotiation. With only two locales a full
 // negotiator/intl-localematcher dependency isn't worth it: we walk the
 // quality-ordered language tags and return the first that is (or starts with)
@@ -66,7 +72,18 @@ export function proxy(request: NextRequest): NextResponse {
     return NextResponse.redirect(new URL("/en/feed.xml", request.url), 301);
   }
 
-  // 5. Everything else (home, /about, /privacy, /terms, …) → detect locale and
+  // 5. Legacy static pages → 301 permanent to the default-locale version. The
+  //    locale-routing structure is verified stable, so we consolidate these
+  //    indexed URLs onto /en/… permanently (French readers use the in-page
+  //    locale-switch link). Fixed target because a 301 is cached.
+  if (LEGACY_PAGES.has(pathname)) {
+    return NextResponse.redirect(
+      new URL(`/${DEFAULT_LOCALE}${pathname}`, request.url),
+      301,
+    );
+  }
+
+  // 6. Everything else (home `/` and any other bare path) → detect locale and
   //    307-redirect into it. 307 (not 301) because the right locale varies per
   //    user and must never be cached as a permanent mapping.
   const locale = getLocale(request);
