@@ -72,7 +72,18 @@ export function proxy(request: NextRequest): NextResponse {
     return NextResponse.redirect(new URL("/en/feed.xml", request.url), 301);
   }
 
-  // 5. Legacy static pages → 301 permanent to the default-locale version. The
+  // 5. Public static assets (/logo.png, /og-image.png, /site.webmanifest,
+  //    /llms.txt, /favicon-32x32.png, …) and metadata files (/robots.txt,
+  //    /sitemap.xml) live at the root and always carry a file extension in the
+  //    final path segment. Pass them through untouched so they aren't swept into
+  //    the locale redirect below (that regression broke the header logo). This
+  //    MUST sit after the IndexNow key check — that file is also a `.txt` but
+  //    needs custom serving above.
+  if (pathname.slice(pathname.lastIndexOf("/") + 1).includes(".")) {
+    return NextResponse.next();
+  }
+
+  // 6. Legacy static pages → 301 permanent to the default-locale version. The
   //    locale-routing structure is verified stable, so we consolidate these
   //    indexed URLs onto /en/… permanently (French readers use the in-page
   //    locale-switch link). Fixed target because a 301 is cached.
@@ -83,7 +94,7 @@ export function proxy(request: NextRequest): NextResponse {
     );
   }
 
-  // 6. Everything else (home `/` and any other bare path) → detect locale and
+  // 7. Everything else (home `/` and any other bare path) → detect locale and
   //    307-redirect into it. 307 (not 301) because the right locale varies per
   //    user and must never be cached as a permanent mapping.
   const locale = getLocale(request);
