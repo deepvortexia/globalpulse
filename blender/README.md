@@ -3,30 +3,40 @@
 Source files for the 3D Globy mascot shown on the `/[lang]/2026` year-in-review
 page (`public/models/globy.glb`, loaded by `src/app/[lang]/2026/GlobyModel.tsx`).
 
-- `globy_build.py` — generator script: builds the whole model procedurally
-  (meshes, emissive gold materials, shard trail, `GlobyRig` armature, the 3s
-  `GlobyIdle` loop), renders preview stills, exports the GLB to
-  `public/models/globy.glb`, and validates it by reimporting.
-- `globy.blend` — the scene the script produced, for interactive editing.
+- `build_v2/` — the generator scripts (v2, current): run in order against a live
+  Blender session, they build the whole model procedurally and export the GLB.
+  - `s02_stage.py` — capture stage: 3 fixed cameras, dark world, render settings
+  - `s03_base_mesh.py` — body: lathed-profile torso + skin-modifier limbs, head, eyes
+  - `s05_materials.py` — emissive gold gradient, translucency, internal filaments
+  - `s05b_glare.py` — fog-glow compositor (render previews only, not exported)
+  - `s06_trail.py` / `s06b_cams.py` — head-originating trail; widened camera framing
+  - `s07_rig.py` — 10-bone armature, region-blended weights, 72-frame `GlobyIdle`
+  - `s09_export.py` — saves `globy.blend`, exports the GLB (Globy objects only)
+- `globy.blend` — the saved v2 scene, for interactive editing.
   Visual reference: `public/globy-turnaround.png`.
 
 ## Regenerating the GLB
 
-The script is the source of truth — tweak proportions/materials/animation in it,
-then rerun (paths inside it are absolute; adjust `REPO`/`SCRATCH` at the top if
-the repo lives elsewhere):
+The scripts were written for the "Claude Bridge" addon (raw Python over TCP
+:5000 into a live Blender), but each one is plain `bpy` code: to rerun without
+the bridge, open Blender, then execute them in the Scripting workspace in
+numeric order (skip `s05b`/`s06b` if you only need the asset, they only affect
+preview renders). Paths inside are absolute; adjust if the repo moves.
 
-```
-"C:\Program Files\Blender Foundation\Blender 5.1\blender.exe" --background --factory-startup --python blender\globy_build.py
-```
-
-Built with Blender 5.1. Note: the script overwrites `public/models/globy.glb`
-and writes `globy.blend` + preview PNGs next to itself.
+Built with Blender 5.1 (note: 5.x compositor API — `scene.compositing_node_group`,
+socket-driven Glare node).
 
 ## Editing the .blend by hand instead
 
 Open `globy.blend`, edit, then export via File → Export → glTF 2.0 (.glb) to
-`public/models/globy.glb` with animations enabled. Keep it light: the web
-budget is well under 2 MB (currently ~121 KB, ~2k tris) and the idle clip must
+`public/models/globy.glb` with animations enabled, selection = the `Globy*`
+objects + `GlobyRig` only (leave out cameras/light). Keep it light: the web
+budget is well under 2 MB (currently ~794 KB, ~27k tris) and the idle clip must
 stay a single action named `GlobyIdle` (the React component plays it by name).
-Hand edits are lost the next time the script runs.
+
+## History
+
+v1 (`globy_build.py`, deleted) built a blob-style Globy headless from the CLI;
+v2 replaced it 2026-07-02 with the fine silhouette, internal gold filaments and
+head-originating trail, built checkpoint-by-checkpoint against the turnaround
+sheet through the live bridge.
