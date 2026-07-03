@@ -2,7 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { fetchAllFeedsRaw, inferCategory } from "@/lib/rss-fetcher";
 import { getServiceRoleClient } from "@/lib/supabase";
 import { submitToIndexNow } from "@/lib/indexnow";
-import type { Article, CategoryId } from "@/types";
+import { findBestMatch, NEAR_DUP_AUTO_DROP, type TitledCandidate } from "@/lib/dedup";
+import type { Article, CategoryId, Language } from "@/types";
 
 // Background job — runs on a schedule (see vercel.json), never user-facing.
 export const runtime = "nodejs";
@@ -17,6 +18,11 @@ const FETCH_BATCH_SIZE = 10;
 const MAX_NEW_PER_RUN = Number(process.env.CRON_MAX_ARTICLES ?? 60);
 const HAIKU_CONCURRENCY = 5;
 const URL_PAGE_SIZE = 1000;
+// Same-event stories from different outlets (or the same story re-served by
+// an unresolvable Google News redirect, see src/lib/dedup.ts) are only
+// compared against recent same-language coverage — old stories that happen
+// to share vocabulary shouldn't suppress a genuinely new article.
+const NEAR_DUP_WINDOW_HOURS = 36;
 
 type ArticleCategory = Exclude<CategoryId, "all" | "top">;
 
@@ -160,6 +166,100 @@ async function loadStoredUrls(
   return stored;
 }
 
+// Loads title + publishedAt + language for every article published within
+// NEAR_DUP_WINDOW_HOURS, to seed the near-duplicate check below. Small
+// column set, bounded time window, so this stays cheap even against the
+// full 7-day-retention table.
+async function loadRecentTitles(
+  db: ReturnType<typeof getServiceRoleClient>,
+): Promise<(TitledCandidate & { language: Language })[]> {
+  const since = new Date(Date.now() - NEAR_DUP_WINDOW_HOURS * 60 * 60 * 1000).toISOString();
+  const { data, error } = await db
+    .from("articles")
+    .select("title, published_at, language")
+    .gte("published_at", since);
+  if (error) throw new Error(`Supabase near-dup query failed: ${error.message}`);
+  return (data ?? []).map((row) => ({
+    title: (row as { title: string }).title,
+    publishedAt: (row as { published_at: string }).published_at,
+    language: (row as { language: string }).language as Language,
+  }));
+}
+
+// Single cheap Haiku call for a borderline title-similarity pair (see
+// NEAR_DUP_AUTO_DROP/_KEEP in src/lib/dedup.ts for why this band needs a
+// judgment call rather than a fixed cutoff). Tiny prompt, 1-token answer —
+// this only runs for pairs scoring in the contested 0.25-0.55 range, which
+// empirical testing showed is rare (a handful per day, not per article).
+async function isSameStoryHaiku(titleA: string, titleB: string): Promise<boolean> {
+  try {
+    const message = await anthropic.messages.create({
+      model: SUMMARY_MODEL,
+      max_tokens: 5,
+      stream: false,
+      messages: [
+        {
+          role: "user",
+          content: `Are these two news headlines about the same specific real-world event/story (not just the same general topic)? Answer with exactly one word: "yes" or "no".\n\nA: ${titleA}\nB: ${titleB}`,
+        },
+      ],
+    });
+    const textBlock = message.content.find((b) => b.type === "text");
+    return !!textBlock && textBlock.type === "text" && /^yes/i.test(textBlock.text.trim());
+  } catch (error) {
+    // Fail open (treat as not-a-duplicate) — losing a near-dup catch is far
+    // cheaper than dropping a genuinely new story over a flaky API call.
+    console.error("[cron/fetch-news] Haiku same-story check failed:", error);
+    return false;
+  }
+}
+
+// Drops near-duplicate stories (same event, different outlet — or the same
+// Google-News-sourced story re-served under a fresh redirect URL) before
+// they're ever classified/inserted.
+//
+// Keep-policy: earliest-published wins. Any candidate that matches an
+// *already-stored* recent article (`recentExisting`) is dropped outright —
+// that story already has a card, and the stored row is definitionally no
+// later than a newly-fetched candidate, so there's nothing to replace.
+// Within the current batch, candidates are walked oldest-first so the first
+// (earliest-published) copy of a story is kept and later copies from other
+// sources are dropped. This is the simpler of the two policies described in
+// the task (earliest-published vs. highest-importance-score) — it needs no
+// Haiku call up front, unlike importance score.
+async function dropNearDuplicates(
+  candidates: Article[],
+  recentExisting: (TitledCandidate & { language: Language })[],
+): Promise<Article[]> {
+  const seenByLanguage: Record<Language, TitledCandidate[]> = {
+    en: recentExisting.filter((r) => r.language === "en"),
+    fr: recentExisting.filter((r) => r.language === "fr"),
+  };
+
+  const oldestFirst = [...candidates].sort(
+    (a, b) => new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime(),
+  );
+
+  const kept: Article[] = [];
+  for (const candidate of oldestFirst) {
+    const bucket = seenByLanguage[candidate.language];
+    const match = findBestMatch(candidate.title, bucket, candidate.language);
+
+    let isDuplicate = false;
+    if (match) {
+      isDuplicate =
+        match.score >= NEAR_DUP_AUTO_DROP || (await isSameStoryHaiku(candidate.title, match.item.title));
+    }
+
+    if (isDuplicate) continue;
+    kept.push(candidate);
+    bucket.push({ title: candidate.title, publishedAt: candidate.publishedAt });
+  }
+
+  // Restore newest-first order to match the rest of the pipeline's convention.
+  return kept.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+}
+
 // Maps an Article + its classification + importance score to a DB insert row.
 function toRow(article: Article, c: Classification, importanceScore: number) {
   return {
@@ -203,21 +303,28 @@ export async function GET(req: Request) {
     // 1. Fetch every source in batches of 10, deduped + newest-first.
     const fetched = await fetchAllFeedsRaw(FETCH_BATCH_SIZE);
 
-    // 2. Drop anything already stored.
+    // 2. Drop anything already stored (exact URL match, post-canonicalization).
     const existing = await loadStoredUrls(db);
     const fresh = fetched.filter((a) => !existing.has(a.url));
 
-    // 3. Bound per-run work (newest first); the rest backfills next run.
-    const toProcess = fresh.slice(0, MAX_NEW_PER_RUN);
+    // 3. Drop near-duplicates: the same event covered by multiple outlets, or
+    // the same story re-served under a fresh Google News redirect URL that
+    // Layer 1 (URL canonicalization) can't resolve. Runs before the
+    // per-run cap so semantic dedup isn't crowded out by near-duplicate noise.
+    const recentTitles = await loadRecentTitles(db);
+    const deduped = await dropNearDuplicates(fresh, recentTitles);
 
-    // 4. Classify + summarize + importance-score with Haiku under a concurrency cap.
+    // 4. Bound per-run work (newest first); the rest backfills next run.
+    const toProcess = deduped.slice(0, MAX_NEW_PER_RUN);
+
+    // 5. Classify + summarize + importance-score with Haiku under a concurrency cap.
     const processed = await mapPool(toProcess, HAIKU_CONCURRENCY, processArticle);
     const errors = processed.filter((p) => p.failed).length;
     const rows = toProcess.map((article, i) =>
       toRow(article, processed[i].classification, processed[i].importanceScore),
     );
 
-    // 5. Insert (upsert/ignore on the unique url to absorb any race).
+    // 6. Insert (upsert/ignore on the unique url to absorb any race).
     let inserted = 0;
     if (rows.length > 0) {
       const { data, error } = await db
@@ -240,7 +347,7 @@ export async function GET(req: Request) {
       }
     }
 
-    // 6. Purge articles older than 7 days. Non-fatal: a cleanup failure must
+    // 7. Purge articles older than 7 days. Non-fatal: a cleanup failure must
     // not fail an otherwise-successful fetch run.
     let purged = true;
     const { error: purgeError } = await db.rpc("delete_old_articles");
@@ -253,8 +360,9 @@ export async function GET(req: Request) {
     return Response.json({
       success: true,
       inserted,
-      skipped: fetched.length - fresh.length,
-      deferred: fresh.length - toProcess.length,
+      skippedUrl: fetched.length - fresh.length,
+      skippedNearDuplicate: fresh.length - deduped.length,
+      deferred: deduped.length - toProcess.length,
       fetched: fetched.length,
       errors,
       purged,
