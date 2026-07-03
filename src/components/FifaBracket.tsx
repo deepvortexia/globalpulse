@@ -1,42 +1,55 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { Language } from "@/types";
 import type { FifaMatch } from "@/lib/fifa-api";
 import { KNOCKOUT_ROUNDS } from "@/lib/fifa-api";
 
-// Progression bracket for the knockout stage. Fed the full tournament match list
-// and buckets it by ESPN round slug (`match.round`) into ordered columns. Only
-// rounds that actually have fixtures are rendered, so the bracket fills in as the
-// tournament advances rather than showing empty future columns.
+// Knockout progression view. Fed the full tournament match list, it buckets the
+// knockout matches by ESPN round slug (`match.round`) and presents one round at a
+// time behind a tab row — the same UX on desktop and mobile (a responsive grid of
+// compact matchup cards), which reads far cleaner than a giant horizontal tree and
+// avoids asserting feeder connections ESPN doesn't reliably expose.
 
 interface FifaBracketProps {
   matches: FifaMatch[];
   language: Language;
 }
 
-// Display names per round slug. Keyed by the same slugs as KNOCKOUT_ROUNDS.
-const ROUND_LABELS: Record<Language, Record<string, string>> = {
+// Full label (tab, desktop) + short label (tab, mobile) per round slug.
+const ROUND_LABELS: Record<Language, Record<string, { full: string; short: string }>> = {
   en: {
-    "round-of-32": "Round of 32",
-    "round-of-16": "Round of 16",
-    quarterfinals: "Quarter-finals",
-    semifinals: "Semi-finals",
-    "3rd-place-match": "Third place",
-    final: "Final",
+    "round-of-32": { full: "Round of 32", short: "R32" },
+    "round-of-16": { full: "Round of 16", short: "R16" },
+    quarterfinals: { full: "Quarter-finals", short: "QF" },
+    semifinals: { full: "Semi-finals", short: "SF" },
+    "3rd-place-match": { full: "Third place", short: "3rd" },
+    final: { full: "Final", short: "Final" },
   },
   fr: {
-    "round-of-32": "16es de finale",
-    "round-of-16": "8es de finale",
-    quarterfinals: "Quarts de finale",
-    semifinals: "Demi-finales",
-    "3rd-place-match": "Petite finale",
-    final: "Finale",
+    "round-of-32": { full: "16es de finale", short: "16es" },
+    "round-of-16": { full: "8es de finale", short: "8es" },
+    quarterfinals: { full: "Quarts", short: "Quarts" },
+    semifinals: { full: "Demies", short: "Demies" },
+    "3rd-place-match": { full: "Petite finale", short: "3e" },
+    final: { full: "Finale", short: "Finale" },
   },
 };
 
+const UI = {
+  en: { tbd: "TBD", live: "Live", ht: "HT", ft: "FT" },
+  fr: { tbd: "À déf.", live: "En direct", ht: "MT", ft: "Terminé" },
+} as const;
+
+// ESPN names an undetermined knockout slot after its feeder, e.g. "Round of 16 1
+// Winner" or "Quarterfinal 2 Winner". Real nations never contain these words, so
+// this cleanly separates a placeholder from a determined team. Exported so other
+// sections (e.g. Upcoming) can hide fixtures whose teams aren't known yet.
+const PLACEHOLDER_RE = /\b(winner|loser|runner)\b/i;
+export const isPlaceholderTeam = (name: string) => PLACEHOLDER_RE.test(name);
+
 function shortKickoff(match: FifaMatch, language: Language): string {
-  if (match.kickoffMs == null) return match.kickoff;
+  if (match.kickoffMs == null) return "";
   return new Intl.DateTimeFormat(language === "fr" ? "fr-FR" : "en-US", {
     weekday: "short",
     day: "numeric",
@@ -46,93 +59,106 @@ function shortKickoff(match: FifaMatch, language: Language): string {
   }).format(new Date(match.kickoffMs));
 }
 
-function BracketTeam({
+function TeamLine({
   flag,
   name,
   score,
   won,
-  dim,
+  loser,
+  tbd,
+  tbdLabel,
 }: {
   flag: string;
   name: string;
   score: number | null;
   won: boolean;
-  dim: boolean;
+  loser: boolean;
+  tbd: boolean;
+  tbdLabel: string;
 }) {
+  if (tbd) {
+    return (
+      <div className="flex items-center gap-2 py-0.5 text-sm text-gv-muted/70">
+        <span className="grid h-5 w-5 place-items-center rounded-full border border-dashed border-gv-border text-[10px]" aria-hidden>
+          ?
+        </span>
+        <span className="italic">{tbdLabel}</span>
+      </div>
+    );
+  }
   return (
-    <div className="flex items-center justify-between gap-2">
-      <span className="flex min-w-0 items-center gap-1.5">
-        <span className="text-base leading-none" aria-hidden>
+    <div className="flex items-center justify-between gap-2 py-0.5">
+      <span className="flex min-w-0 items-center gap-2">
+        <span className="text-lg leading-none" aria-hidden>
           {flag}
         </span>
-        <span
-          className={`truncate text-sm ${
-            won ? "font-bold text-white" : dim ? "text-gv-muted" : "text-white"
-          }`}
-        >
+        <span className={`truncate text-sm ${won ? "font-bold text-white" : loser ? "text-gv-muted" : "text-white"}`}>
           {name}
         </span>
       </span>
-      <span
-        className={`tabular-nums text-sm ${
-          won ? "font-bold text-gv-gold" : "text-gv-muted"
-        }`}
-      >
+      <span className={`tabular-nums text-sm ${won ? "font-bold text-gv-gold" : "text-gv-muted"}`}>
         {score ?? "–"}
       </span>
     </div>
   );
 }
 
-function BracketMatch({ match, language }: { match: FifaMatch; language: Language }) {
+function MatchupCard({ match, language }: { match: FifaMatch; language: Language }) {
+  const ui = UI[language];
   const finished = match.status === "finished";
   const live = match.status === "live";
-  // Emphasise the advancing side once a knockout tie is decided.
-  const homeWon = finished && match.homeScore != null && match.awayScore != null && match.homeScore > match.awayScore;
-  const awayWon = finished && match.homeScore != null && match.awayScore != null && match.awayScore > match.homeScore;
+  const homeTbd = isPlaceholderTeam(match.homeName);
+  const awayTbd = isPlaceholderTeam(match.awayName);
+  const decided = finished && !homeTbd && !awayTbd && match.homeScore != null && match.awayScore != null;
+  const homeWon = decided && match.homeScore! > match.awayScore!;
+  const awayWon = decided && match.awayScore! > match.homeScore!;
 
-  const stateLine = live ? (
-    <span className="inline-flex items-center gap-1 font-bold uppercase text-red-400">
+  const footer = live ? (
+    <span className="inline-flex items-center gap-1.5 font-bold uppercase tracking-wide text-red-400">
       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" aria-hidden />
-      {match.isHalftime ? "HT" : match.minute || "Live"}
+      {match.isHalftime ? ui.ht : match.minute || ui.live}
     </span>
   ) : finished ? (
-    <span className="uppercase tracking-wide text-gv-muted">FT</span>
+    <span className="uppercase tracking-wide text-gv-muted">{ui.ft}</span>
   ) : (
     <span className="text-gv-muted">{shortKickoff(match, language)}</span>
   );
 
   return (
     <div
-      className={`rounded-lg border bg-gv-card/60 px-3 py-2 ${
-        live ? "border-red-700/50" : "border-gv-border"
+      className={`flex flex-col rounded-xl border bg-gv-card/60 px-3.5 py-2.5 transition-colors ${
+        live ? "border-red-700/50 shadow-lg shadow-red-950/20" : "border-gv-border hover:border-gv-gold/40"
       }`}
     >
-      <div className="space-y-1.5">
-        <BracketTeam
+      <div className="divide-y divide-gv-border/50">
+        <TeamLine
           flag={match.homeFlag}
           name={match.homeName}
           score={match.homeScore}
           won={homeWon}
-          dim={awayWon}
+          loser={awayWon}
+          tbd={homeTbd}
+          tbdLabel={ui.tbd}
         />
-        <BracketTeam
+        <TeamLine
           flag={match.awayFlag}
           name={match.awayName}
           score={match.awayScore}
           won={awayWon}
-          dim={homeWon}
+          loser={homeWon}
+          tbd={awayTbd}
+          tbdLabel={ui.tbd}
         />
       </div>
-      <div className="mt-1.5 border-t border-gv-border/50 pt-1 text-[11px]">{stateLine}</div>
+      <div className="mt-2 border-t border-gv-border/60 pt-1.5 text-[11px]">{footer}</div>
     </div>
   );
 }
 
 export default function FifaBracket({ matches, language }: FifaBracketProps) {
-  // Bucket knockout matches by round slug, preserving progression order and
-  // dropping rounds with no fixtures yet.
-  const columns = useMemo(() => {
+  // Bucket knockout matches by round, keeping only rounds that have fixtures and
+  // preserving progression order.
+  const rounds = useMemo(() => {
     const byRound = new Map<string, FifaMatch[]>();
     for (const m of matches) {
       if (!(KNOCKOUT_ROUNDS as readonly string[]).includes(m.round)) continue;
@@ -142,30 +168,64 @@ export default function FifaBracket({ matches, language }: FifaBracketProps) {
     }
     return KNOCKOUT_ROUNDS.filter((slug) => byRound.has(slug)).map((slug) => ({
       slug,
-      label: ROUND_LABELS[language][slug] ?? slug,
+      labels: ROUND_LABELS[language][slug] ?? { full: slug, short: slug },
       matches: (byRound.get(slug) ?? []).sort(
         (a, b) => (a.kickoffMs ?? Infinity) - (b.kickoffMs ?? Infinity),
       ),
     }));
   }, [matches, language]);
 
-  if (columns.length === 0) return null;
+  // Land the user on the round that's actually in play: the earliest round still
+  // holding a live or upcoming match, else the last round with fixtures.
+  const activeSlug = useMemo(() => {
+    const inPlay = rounds.find((r) => r.matches.some((m) => m.status === "live" || m.status === "notstarted"));
+    return inPlay?.slug ?? rounds[rounds.length - 1]?.slug ?? "";
+  }, [rounds]);
+
+  // null = no explicit choice yet, so follow the active round. A user tap sticks
+  // unless that round later disappears, in which case we fall back to active —
+  // all resolved during render, no state-syncing effect needed.
+  const [selected, setSelected] = useState<string | null>(null);
+
+  if (rounds.length === 0) return null;
+  const current =
+    rounds.find((r) => r.slug === selected) ??
+    rounds.find((r) => r.slug === activeSlug) ??
+    rounds[0];
 
   return (
-    <div className="overflow-x-auto pb-2">
-      <div className="flex min-w-max gap-4">
-        {columns.map((col) => (
-          <div key={col.slug} className="w-56 shrink-0">
-            <div className="mb-2 rounded-md bg-gv-gold/10 px-2.5 py-1.5 text-xs font-bold uppercase tracking-wide text-gv-gold">
-              {col.label}
-              <span className="ml-1.5 font-normal text-gv-muted">{col.matches.length}</span>
-            </div>
-            <div className="space-y-2">
-              {col.matches.map((m) => (
-                <BracketMatch key={m.id} match={m} language={language} />
-              ))}
-            </div>
-          </div>
+    <div>
+      {/* Round tabs — house segmented-control style, scrollable on narrow screens */}
+      <div className="no-scrollbar -mx-1 mb-4 overflow-x-auto px-1">
+        <div
+          role="tablist"
+          aria-label="Knockout round"
+          className="inline-flex w-max gap-0.5 rounded-full border border-gv-border bg-gv-bg/70 p-0.5"
+        >
+          {rounds.map((r) => {
+            const active = r.slug === current.slug;
+            return (
+              <button
+                key={r.slug}
+                role="tab"
+                aria-selected={active}
+                onClick={() => setSelected(r.slug)}
+                className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors ${
+                  active ? "bg-gv-gold text-gv-bg" : "text-gv-muted hover:text-white"
+                }`}
+              >
+                <span className="sm:hidden">{r.labels.short}</span>
+                <span className="hidden sm:inline">{r.labels.full}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Selected round — responsive grid of matchups */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {current.matches.map((m) => (
+          <MatchupCard key={m.id} match={m} language={language} />
         ))}
       </div>
     </div>

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Language } from "@/types";
 import type { ApiResponse } from "@/types";
 import type { FifaData, FifaMatch, FifaGroup, FifaScorer } from "@/lib/fifa-api";
-import FifaBracket from "@/components/FifaBracket";
+import FifaBracket, { isPlaceholderTeam } from "@/components/FifaBracket";
 
 interface FifaSectionProps {
   language: Language;
@@ -25,6 +25,7 @@ const T = {
     results: "Recent Results",
     bracket: "Knockout Bracket",
     standings: "Group Standings",
+    groupsLabel: "groups",
     noLive: "No matches in progress right now.",
     loading: "Loading live scores…",
     error: "Couldn’t load FIFA data. Retrying…",
@@ -43,6 +44,7 @@ const T = {
     results: "Résultats récents",
     bracket: "Tableau final",
     standings: "Classements des groupes",
+    groupsLabel: "groupes",
     noLive: "Aucun match en cours actuellement.",
     loading: "Chargement des scores…",
     error: "Impossible de charger les données FIFA. Nouvel essai…",
@@ -105,7 +107,7 @@ function LiveCard({ match, t }: { match: FifaMatch; t: (typeof T)[Language] }) {
   // The current half is only meaningful while play is ongoing, not at HT.
   const half = match.isHalftime ? null : halfLabel(match.period, t);
   return (
-    <div className="rounded-xl border border-red-700/40 bg-gv-card p-4 shadow-lg shadow-red-900/10">
+    <div className="rounded-xl border border-red-700/50 bg-gv-card p-4 shadow-lg shadow-red-950/20">
       <div className="mb-3 flex items-center justify-between">
         <LiveBadge label={t.live} detail={detail} />
         <span className="text-xs text-gv-muted">
@@ -123,7 +125,7 @@ function LiveCard({ match, t }: { match: FifaMatch; t: (typeof T)[Language] }) {
 
 function UpcomingCard({ match, language }: { match: FifaMatch; language: Language }) {
   return (
-    <div className="rounded-xl border border-gv-border bg-gv-card/70 p-4">
+    <div className="rounded-xl border border-gv-border bg-gv-card/60 p-4 transition-colors hover:border-gv-gold/40">
       <div className="mb-2 flex items-center justify-between text-xs text-gv-muted">
         <span>{match.group ? `Group ${match.group}` : match.type}</span>
         <span>{formatKickoff(match, language)}</span>
@@ -149,7 +151,7 @@ function UpcomingCard({ match, language }: { match: FifaMatch; language: Languag
 
 function ResultCard({ match }: { match: FifaMatch }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-gv-border bg-gv-card/50 px-3 py-2.5">
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-gv-border bg-gv-card/60 px-3 py-2.5 transition-colors hover:border-gv-gold/40">
       <span className="flex min-w-0 flex-1 items-center gap-2">
         <span className="text-lg" aria-hidden>
           {match.homeFlag}
@@ -329,6 +331,9 @@ export default function FifaSection({ language }: FifaSectionProps) {
     () =>
       (data?.matches ?? [])
         .filter((m) => m.status === "notstarted")
+        // Hide knockout fixtures whose teams aren't decided yet ("Round of 16 1
+        // Winner …") — those live in the bracket as clean TBD slots instead.
+        .filter((m) => !isPlaceholderTeam(m.homeName) && !isPlaceholderTeam(m.awayName))
         .sort((a, b) => (a.kickoffMs ?? Infinity) - (b.kickoffMs ?? Infinity))
         .slice(0, MAX_UPCOMING),
     [data],
@@ -347,6 +352,27 @@ export default function FifaSection({ language }: FifaSectionProps) {
     () => (data?.matches ?? []).some((m) => m.round && m.round !== "group-stage"),
     [data],
   );
+
+  // Standings are only worth foregrounding once groups have played enough to
+  // stop being all-zeros — "most teams in most groups have played ≥2 matches".
+  const groupStageMeaningful = useMemo(() => {
+    const groups = data?.groups ?? [];
+    if (groups.length === 0) return false;
+    const settled = groups.filter((g) => {
+      const played = g.standings.filter((s) => s.mp >= 2).length;
+      return played >= Math.ceil(g.standings.length / 2);
+    }).length;
+    return settled >= Math.ceil(groups.length / 2);
+  }, [data]);
+
+  // Where standings sit in the priority order. Default-open only during a
+  // meaningful group stage before knockouts begin; once the bracket is live it's
+  // the focus and standings collapse to reference material. Flip this single
+  // expression to make standings prominent again post-group-stage.
+  const standingsDefaultOpen = groupStageMeaningful && !hasKnockout;
+  // null = follow the default; a boolean = an explicit user choice that sticks.
+  const [standingsToggled, setStandingsToggled] = useState<boolean | null>(null);
+  const standingsOpen = standingsToggled ?? standingsDefaultOpen;
 
   return (
     <section className="rounded-2xl border border-gv-border bg-gv-bg/60 p-4 sm:p-6">
@@ -396,6 +422,14 @@ export default function FifaSection({ language }: FifaSectionProps) {
             </div>
           )}
 
+          {/* Knockout bracket — the focus once the tournament reaches the KO stage */}
+          {hasKnockout && (
+            <div>
+              <SectionHeading>{t.bracket}</SectionHeading>
+              <FifaBracket matches={data.matches} language={language} />
+            </div>
+          )}
+
           {/* Recent results */}
           {results.length > 0 && (
             <div>
@@ -408,23 +442,39 @@ export default function FifaSection({ language }: FifaSectionProps) {
             </div>
           )}
 
-          {/* Knockout bracket */}
-          {hasKnockout && (
-            <div>
-              <SectionHeading>{t.bracket}</SectionHeading>
-              <FifaBracket matches={data.matches} language={language} />
-            </div>
-          )}
-
-          {/* Standings */}
+          {/* Standings — collapsible; demoted below the live/bracket content and
+              opened by default only while the group stage is the active phase. */}
           {data.groups.length > 0 && (
             <div>
-              <SectionHeading>{t.standings}</SectionHeading>
-              <div className="grid gap-4 lg:grid-cols-2">
-                {data.groups.map((g) => (
-                  <GroupTable key={g.name} group={g} t={t} />
-                ))}
-              </div>
+              <button
+                type="button"
+                aria-expanded={standingsOpen}
+                onClick={() => setStandingsToggled(!standingsOpen)}
+                className="group flex w-full items-center gap-2 font-display text-lg font-bold text-white transition-colors hover:text-gv-gold"
+              >
+                <span className="h-4 w-1 rounded-full bg-gv-gold" aria-hidden />
+                {t.standings}
+                <span className="text-sm font-normal text-gv-muted">
+                  · {data.groups.length} {t.groupsLabel}
+                </span>
+                <svg
+                  className={`ml-auto h-4 w-4 text-gv-muted transition-transform ${standingsOpen ? "rotate-180" : ""}`}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  aria-hidden
+                >
+                  <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              {standingsOpen && (
+                <div className="mt-3 grid gap-4 lg:grid-cols-2">
+                  {data.groups.map((g) => (
+                    <GroupTable key={g.name} group={g} t={t} />
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
