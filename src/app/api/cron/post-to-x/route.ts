@@ -2,6 +2,7 @@ import { ApiResponseError, TwitterApi } from "twitter-api-v2";
 import { getTopStories } from "@/lib/articles";
 import { getServiceRoleClient } from "@/lib/supabase";
 import { CATEGORIES } from "@/lib/categories";
+import { canonicalizeUrl } from "@/lib/dedup";
 import type { Article } from "@/types";
 
 // Background job — posts one EN Top Story to X (@GlobeVortex) per run, triggered
@@ -111,11 +112,14 @@ async function firstUnposted(
   stories: Article[],
 ): Promise<Article | null> {
   if (stories.length === 0) return null;
-  const urls = stories.map((s) => s.url);
+  // Canonicalize before comparing/storing so a Google-News-sourced story that
+  // reappears under a fresh (but otherwise identical after canonicalization)
+  // redirect URL doesn't get treated as new and re-tweeted.
+  const urls = stories.map((s) => canonicalizeUrl(s.url));
   const { data, error } = await db.from("x_posts").select("article_url").in("article_url", urls);
   if (error) throw new Error(`Supabase x_posts read failed: ${error.message}`);
   const posted = new Set((data ?? []).map((r) => (r as { article_url: string }).article_url));
-  return stories.find((s) => !posted.has(s.url)) ?? null;
+  return stories.find((s) => !posted.has(canonicalizeUrl(s.url))) ?? null;
 }
 
 export async function GET(req: Request) {
@@ -215,7 +219,7 @@ export async function GET(req: Request) {
     //    against a double-post race; a conflict here means it's already logged.
     const { error: insertError } = await db.from("x_posts").insert({
       article_id: article.id,
-      article_url: article.url,
+      article_url: canonicalizeUrl(article.url),
       tweet_id: tweetId,
       reply_tweet_id: replyTweetId,
     });

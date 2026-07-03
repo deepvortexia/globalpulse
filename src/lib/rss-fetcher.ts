@@ -1,5 +1,6 @@
 import Parser from "rss-parser";
 import { RSS_SOURCES } from "./rss-sources";
+import { canonicalizeUrl } from "./dedup";
 import type { Article, CategoryId, RSSSource } from "@/types";
 
 type ArticleCategory = Exclude<CategoryId, "all" | "top">;
@@ -114,12 +115,13 @@ function toArticle(item: FeedItem, source: RSSSource): Article | null {
 
   const title = decodeHtmlEntities(item.title.trim());
   const description = decodeHtmlEntities((item.contentSnippet ?? item.content ?? "").trim());
+  const url = canonicalizeUrl(item.link);
 
   return {
-    id: makeId(item.link),
+    id: makeId(url),
     title,
     description,
-    url: item.link,
+    url,
     source: source.name,
     language: source.language,
     category: inferCategory(title, description),
