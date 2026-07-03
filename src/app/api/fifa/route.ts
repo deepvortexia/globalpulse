@@ -8,13 +8,22 @@ import type { ApiResponse } from "@/types";
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  // Teams (and the groups they feed into) come from worldcup26.ir, a
+  // third-party free API with no uptime guarantee. Live scores from ESPN are
+  // the reason this route exists, so an outage there should still let the
+  // board render with blank flags/groups rather than 502ing everything.
+  const teams = await fetchTeams().catch((error) => {
+    console.error("[/api/fifa] fetchTeams failed, falling back to empty team list:", error);
+    return [];
+  });
+
   try {
-    // Fetch teams once and feed the map into both builders to avoid refetching
-    // (Route Handlers don't get fetch memoization).
-    const teams = await fetchTeams();
     const [matches, groups, scorers] = await Promise.all([
       fetchMatches(teams),
-      fetchGroups(teams),
+      fetchGroups(teams).catch((error) => {
+        console.error("[/api/fifa] fetchGroups failed, falling back to empty groups:", error);
+        return [];
+      }),
       fetchScorers(teams),
     ]);
 
