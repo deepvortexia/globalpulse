@@ -1,31 +1,32 @@
-import { fetchTeams, fetchMatches, fetchGroups, fetchScorers } from "@/lib/fifa-api";
+import { fetchTeams, fetchMatches, fetchScorers, computeGroupStandings } from "@/lib/fifa-api";
 import type { FifaData } from "@/lib/fifa-api";
 import type { ApiResponse } from "@/types";
 
-// Cached for 30s at the route level. Live scores come from ESPN and standings
-// from worldcup26.ir (see fifa-api); their own revalidate windows cap how often
-// each upstream is hit, and this route caps how often any of them is hit at all.
+// Cached for 30s at the route level. Everything (live scores, the full-tournament
+// match list, and the group standings computed from it) comes from ESPN;
+// worldcup26.ir is only consulted for team flags/group labels. Each fetch's own
+// revalidate window caps upstream hits, and this route caps how often any of them
+// is hit at all.
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  // Teams (and the groups they feed into) come from worldcup26.ir, a
-  // third-party free API with no uptime guarantee. Live scores from ESPN are
-  // the reason this route exists, so an outage there should still let the
-  // board render with blank flags/groups rather than 502ing everything.
+  // Teams come from worldcup26.ir, a third-party free API with no uptime
+  // guarantee, so its failure must not take down the board: flags/group labels
+  // just degrade. The live scores, bracket and standings all derive from ESPN.
   const teams = await fetchTeams().catch((error) => {
     console.error("[/api/fifa] fetchTeams failed, falling back to empty team list:", error);
     return [];
   });
 
   try {
-    const [matches, groups, scorers] = await Promise.all([
+    const [matches, scorers] = await Promise.all([
       fetchMatches(teams),
-      fetchGroups(teams).catch((error) => {
-        console.error("[/api/fifa] fetchGroups failed, falling back to empty groups:", error);
-        return [];
-      }),
       fetchScorers(teams),
     ]);
+
+    // Standings are derived from finished ESPN group-stage results rather than
+    // fetched from worldcup26.ir, so they stay correct even when it's down.
+    const groups = computeGroupStandings(matches);
 
     return Response.json(
       { success: true, data: { matches, groups, teams, scorers } } satisfies ApiResponse<FifaData>,

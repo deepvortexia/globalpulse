@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Language } from "@/types";
 import type { ApiResponse } from "@/types";
 import type { FifaData, FifaMatch, FifaGroup, FifaScorer } from "@/lib/fifa-api";
+import FifaBracket from "@/components/FifaBracket";
 
 interface FifaSectionProps {
   language: Language;
@@ -22,6 +23,7 @@ const T = {
     live: "Live Now",
     upcoming: "Upcoming",
     results: "Recent Results",
+    bracket: "Knockout Bracket",
     standings: "Group Standings",
     noLive: "No matches in progress right now.",
     loading: "Loading live scores…",
@@ -39,6 +41,7 @@ const T = {
     live: "En Direct",
     upcoming: "À venir",
     results: "Résultats récents",
+    bracket: "Tableau final",
     standings: "Classements des groupes",
     noLive: "Aucun match en cours actuellement.",
     loading: "Chargement des scores…",
@@ -338,6 +341,12 @@ export default function FifaSection({ language }: FifaSectionProps) {
         .slice(0, MAX_RESULTS),
     [data],
   );
+  // The bracket renders itself only once knockout fixtures exist; mirror that
+  // here so the section heading doesn't appear during the group stage.
+  const hasKnockout = useMemo(
+    () => (data?.matches ?? []).some((m) => m.round && m.round !== "group-stage"),
+    [data],
+  );
 
   return (
     <section className="rounded-2xl border border-gv-border bg-gv-bg/60 p-4 sm:p-6">
@@ -396,6 +405,14 @@ export default function FifaSection({ language }: FifaSectionProps) {
                   <ResultCard key={m.id} match={m} />
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Knockout bracket */}
+          {hasKnockout && (
+            <div>
+              <SectionHeading>{t.bracket}</SectionHeading>
+              <FifaBracket matches={data.matches} language={language} />
             </div>
           )}
 
