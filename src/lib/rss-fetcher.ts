@@ -100,7 +100,11 @@ const MAX_FEED_BYTES = 4 * 1024 * 1024;
 // once) to avoid opening too many sockets at once; high enough that even if
 // every source hits the network timeout, a full run stays well under the
 // function's 300s budget: ceil(100 / 20) * 12s = 60s worst case.
-const FETCH_CONCURRENCY = 20;
+// TEMP DIAGNOSTIC: forced to 1 so sources process strictly sequentially — with
+// only one in flight at a time, the last "pre-parse" line before the hang is
+// unambiguously the culprit (no concurrent lines racing/getting dropped by
+// Vercel's lossy log stream). Restore to 20 once the source is identified.
+const FETCH_CONCURRENCY = 1;
 
 const parser: Parser<unknown, FeedItem> = new Parser({
   timeout: FETCH_TIMEOUT_MS,
