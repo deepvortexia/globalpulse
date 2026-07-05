@@ -100,12 +100,14 @@ const MAX_FEED_BYTES = 4 * 1024 * 1024;
 // once) to avoid opening too many sockets at once; high enough that even if
 // every source hits the network timeout, a full run stays well under the
 // function's 300s budget: ceil(100 / 20) * 12s = 60s worst case.
-// TEMP DIAGNOSTIC: set to 5 to reproduce the concurrency-driven wedge faster
-// than sequential (1) while keeping per-tick log volume low enough to survive
-// Vercel's lossy stream. Paired with the memory-sampling heartbeat to confirm
-// whether peak heap climbs to a wall at wedge time. Restore to a safe value
-// with the fix.
-const FETCH_CONCURRENCY = 5;
+// Moderate concurrency: fast enough to avoid sequential dead-source timeouts
+// piling up, low enough to bound peak simultaneous memory.
+const FETCH_CONCURRENCY = 6;
+// Wall-clock ceiling on the whole fetch stage. Once exceeded, workers stop
+// starting new sources and return what they have, so the stage can never run
+// the function to its 300s platform limit — whatever the cause (slow source,
+// deadlock). Leaves ample budget for classification + insert afterwards.
+const FETCH_STAGE_BUDGET_MS = 90_000;
 
 const parser: Parser<unknown, FeedItem> = new Parser({
   timeout: FETCH_TIMEOUT_MS,
@@ -225,17 +227,40 @@ async function fetchSource(source: RSSSource): Promise<Article[]> {
   return articles;
 }
 
+export interface FetchAllResult {
+  articles: Article[];
+  sourcesTotal: number;
+  sourcesFetched: number; // completed a fetch+parse (regardless of item count)
+  sourcesFailed: number; // threw (bad status, timeout, cap, parse error)
+  sourcesSkipped: number; // never started — the stage deadline had passed
+}
+
 // Concurrency-bounded variant for the background cron: fetches every source
 // through a fixed-size worker pool (rather than sequential batches, where one
 // slow batch delays every batch after it), dedupes by URL, and returns ALL
 // parsed articles sorted newest-first WITHOUT the 4-8h freshness trim (the DB
-// applies its own 7-day retention). Per-source failures (including the hard
-// timeout above) are logged and skipped — never allowed to sink the run.
-export async function fetchAllFeedsRaw(concurrency = FETCH_CONCURRENCY): Promise<Article[]> {
+// applies its own 7-day retention). Per-source failures are logged and skipped.
+// A wall-clock deadline bounds the whole stage: once passed, remaining sources
+// are skipped rather than started, so no source can push the run to the 300s
+// platform limit. Returns per-source counts so the caller can report them.
+export async function fetchAllFeedsRaw(
+  concurrency = FETCH_CONCURRENCY,
+  deadlineMs = Date.now() + FETCH_STAGE_BUDGET_MS,
+): Promise<FetchAllResult> {
+  let sourcesFetched = 0;
+  let sourcesFailed = 0;
+  let sourcesSkipped = 0;
   const results = await mapPool(RSS_SOURCES, concurrency, async (source) => {
+    if (Date.now() > deadlineMs) {
+      sourcesSkipped++;
+      return [] as Article[];
+    }
     try {
-      return await fetchSource(source);
+      const articles = await fetchSource(source);
+      sourcesFetched++;
+      return articles;
     } catch (error) {
+      sourcesFailed++;
       console.error(`[rss-fetcher] Failed to fetch "${source.name}":`, error);
       return [] as Article[];
     }
@@ -247,9 +272,16 @@ export async function fetchAllFeedsRaw(concurrency = FETCH_CONCURRENCY): Promise
     if (!deduped.has(article.url)) deduped.set(article.url, article);
   }
 
-  return Array.from(deduped.values()).sort(
-    (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+  const articles = Array.from(deduped.values()).sort(
+    (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
   );
+  return {
+    articles,
+    sourcesTotal: RSS_SOURCES.length,
+    sourcesFetched,
+    sourcesFailed,
+    sourcesSkipped,
+  };
 }
 
 export async function fetchAllFeeds(): Promise<Article[]> {

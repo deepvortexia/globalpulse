@@ -318,26 +318,29 @@ export async function GET(req: Request) {
   // its time. Remove once the fetch-news hang investigation is closed out.
   const mark = (label: string) => console.error(`[cron/fetch-news] TEMP stage: ${label} at +${Date.now() - start}ms`);
 
-  // TEMP DIAGNOSTIC: independent heartbeat sampling memory every 1s. If heap/rss
-  // climb steadily and the heartbeat then goes silent at a high value, the wedge
-  // is memory/GC pressure (stop-the-world GC starves timers) — confirming the
-  // concurrency-dependent theory. 1s interval so more samples survive Vercel's
-  // lossy log stream. The last surviving line shows the memory level at wedge.
-  const heartbeat = setInterval(() => {
-    const m = process.memoryUsage();
-    const mb = (n: number) => Math.round(n / 1024 / 1024);
-    console.error(
-      `[cron/fetch-news] TEMP heartbeat +${Date.now() - start}ms rss=${mb(m.rss)}MB heapUsed=${mb(m.heapUsed)}MB heapTotal=${mb(m.heapTotal)}MB ext=${mb(m.external)}MB`,
-    );
-  }, 1000);
+  // TEMP DIAGNOSTIC: track peak RSS so it can be RETURNED in the response
+  // (below). Vercel's log stream drops ~90% of lines, so heartbeat logs rarely
+  // survive; the HTTP response, captured losslessly by the GitHub Actions
+  // workflow's `cat response.json`, is the reliable readout. Low peak here means
+  // the wedge was never memory; a high peak near the function limit confirms it.
+  let peakRssMb = 0;
+  const sampleMem = () => {
+    const rss = Math.round(process.memoryUsage().rss / 1024 / 1024);
+    if (rss > peakRssMb) peakRssMb = rss;
+  };
+  const heartbeat = setInterval(sampleMem, 500);
 
   try {
     const db = getServiceRoleClient();
     mark("got db client");
 
     // 1. Fetch every source through a bounded worker pool, deduped + newest-first.
-    const fetched = await fetchAllFeedsRaw();
-    mark(`fetched ${fetched.length} raw articles`);
+    const fetchRes = await fetchAllFeedsRaw();
+    const fetched = fetchRes.articles;
+    sampleMem();
+    mark(
+      `fetched ${fetched.length} articles; sources fetched=${fetchRes.sourcesFetched} failed=${fetchRes.sourcesFailed} skipped=${fetchRes.sourcesSkipped}; peakRss=${peakRssMb}MB`,
+    );
 
     // 2. Drop anything already stored (exact URL match, post-canonicalization).
     const existing = await loadStoredUrls(db);
@@ -397,6 +400,7 @@ export async function GET(req: Request) {
       console.error("[cron/fetch-news] delete_old_articles failed:", purgeError.message);
     }
 
+    sampleMem();
     const duration = Date.now() - start;
     return Response.json({
       success: true,
@@ -408,6 +412,14 @@ export async function GET(req: Request) {
       errors,
       purged,
       duration,
+      // TEMP DIAGNOSTIC: lossless readout via the workflow's response capture.
+      sources: {
+        fetched: fetchRes.sourcesFetched,
+        failed: fetchRes.sourcesFailed,
+        skipped: fetchRes.sourcesSkipped,
+        total: fetchRes.sourcesTotal,
+      },
+      peakRssMb,
     });
   } catch (error) {
     console.error("[cron/fetch-news] Run failed:", error);
