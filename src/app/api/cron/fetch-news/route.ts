@@ -322,68 +322,33 @@ export async function GET(req: Request) {
     return Response.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  // TEMP DIAGNOSTIC: stage-boundary timing to find where a run is spending
-  // its time. Remove once the fetch-news hang investigation is closed out.
-  const mark = (label: string) => console.error(`[cron/fetch-news] TEMP stage: ${label} at +${Date.now() - start}ms`);
-
-  // TEMP DIAGNOSTIC: track peak RSS so it can be RETURNED in the response
-  // (below). Vercel's log stream drops ~90% of lines, so heartbeat logs rarely
-  // survive; the HTTP response, captured losslessly by the GitHub Actions
-  // workflow's `cat response.json`, is the reliable readout. Low peak here means
-  // the wedge was never memory; a high peak near the function limit confirms it.
-  let peakRssMb = 0;
-  const sampleMem = () => {
-    const rss = Math.round(process.memoryUsage().rss / 1024 / 1024);
-    if (rss > peakRssMb) peakRssMb = rss;
-  };
-  const heartbeat = setInterval(sampleMem, 500);
-
   try {
-    // TEMP DIAGNOSTIC: per-stage wall-clock, returned losslessly in the response.
-    let t = Date.now();
-    const lap = () => { const d = Date.now() - t; t = Date.now(); return d; };
-    const stageMs: Record<string, number> = {};
-
     const db = getServiceRoleClient();
-    mark("got db client");
-    lap();
 
     // 1. Fetch every source through a bounded worker pool, deduped + newest-first.
     const fetchRes = await fetchAllFeedsRaw();
     const fetched = fetchRes.articles;
-    sampleMem();
-    stageMs.fetch = lap();
-    mark(
-      `fetched ${fetched.length} articles; sources fetched=${fetchRes.sourcesFetched} failed=${fetchRes.sourcesFailed} skipped=${fetchRes.sourcesSkipped}; peakRss=${peakRssMb}MB`,
-    );
 
     // 2. Drop anything already stored (exact URL match, post-canonicalization).
     const existing = await loadStoredUrls(db);
     const fresh = fetched.filter((a) => !existing.has(a.url));
-    stageMs.urlDedup = lap();
-    mark(`${fresh.length} fresh after url dedup`);
 
     // 3. Drop near-duplicates: the same event covered by multiple outlets, or
     // the same story re-served under a fresh Google News redirect URL that
-    // Layer 1 (URL canonicalization) can't resolve. Runs before the
-    // per-run cap so semantic dedup isn't crowded out by near-duplicate noise.
+    // Layer 1 (URL canonicalization) can't resolve. Runs before the per-run cap
+    // so semantic dedup isn't crowded out by near-duplicate noise. The input is
+    // bounded (see below) so this pass can't O(N×M)-explode on a large backlog.
     const recentTitles = await loadRecentTitles(db);
-    stageMs.loadRecentTitles = lap();
-    // Bound the near-dup input (fresh is newest-first) so a large backlog can't
-    // make this pass O(N×M)-explode; the remainder backfills on later runs.
+    // fresh is newest-first; trim before the near-dup pass so a backlog can't
+    // blow the time budget. The remainder backfills on successive 15-min runs.
     const dedupInput = fresh.slice(0, MAX_DEDUP_CANDIDATES);
     const deduped = await dropNearDuplicates(dedupInput, recentTitles);
-    stageMs.nearDup = lap();
-    sampleMem();
-    mark(`${deduped.length} after near-dup pass`);
 
     // 4. Bound per-run work (newest first); the rest backfills next run.
     const toProcess = deduped.slice(0, MAX_NEW_PER_RUN);
 
     // 5. Classify + summarize + importance-score with Haiku under a concurrency cap.
     const processed = await mapPool(toProcess, HAIKU_CONCURRENCY, processArticle);
-    stageMs.haiku = lap();
-    mark(`classified ${processed.length} articles`);
     const errors = processed.filter((p) => p.failed).length;
     const rows = toProcess.map((article, i) =>
       toRow(article, processed[i].classification, processed[i].importanceScore),
@@ -412,8 +377,6 @@ export async function GET(req: Request) {
       }
     }
 
-    stageMs.insert = lap();
-
     // 7. Purge articles older than 7 days. Non-fatal: a cleanup failure must
     // not fail an otherwise-successful fetch run.
     let purged = true;
@@ -422,9 +385,7 @@ export async function GET(req: Request) {
       purged = false;
       console.error("[cron/fetch-news] delete_old_articles failed:", purgeError.message);
     }
-    stageMs.purge = lap();
 
-    sampleMem();
     const duration = Date.now() - start;
     return Response.json({
       success: true,
@@ -433,20 +394,11 @@ export async function GET(req: Request) {
       skippedNearDuplicate: dedupInput.length - deduped.length,
       deferred: deduped.length - toProcess.length,
       fetched: fetched.length,
+      sourcesFetched: fetchRes.sourcesFetched,
+      sourcesFailed: fetchRes.sourcesFailed,
       errors,
       purged,
       duration,
-      // TEMP DIAGNOSTIC: lossless readout via the workflow's response capture.
-      freshAfterUrlDedup: fresh.length,
-      recentTitles: recentTitles.length,
-      sources: {
-        fetched: fetchRes.sourcesFetched,
-        failed: fetchRes.sourcesFailed,
-        skipped: fetchRes.sourcesSkipped,
-        total: fetchRes.sourcesTotal,
-      },
-      stageMs,
-      peakRssMb,
     });
   } catch (error) {
     console.error("[cron/fetch-news] Run failed:", error);
@@ -458,7 +410,5 @@ export async function GET(req: Request) {
       },
       { status: 500 },
     );
-  } finally {
-    clearInterval(heartbeat);
   }
 }

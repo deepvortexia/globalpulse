@@ -96,14 +96,10 @@ const FETCH_TIMEOUT_MS = 12_000;
 // never blocks. 4 MB comfortably fits legitimate feeds (largest real ones seen
 // are ~1-2 MB).
 const MAX_FEED_BYTES = 4 * 1024 * 1024;
-// TEMP DIAGNOSTIC: only fetch the first N sources. 0 = no cap (all sources).
-const TEMP_SOURCE_CAP = 0;
-// How many sources to fetch concurrently. Bounded (rather than all 100 at
-// once) to avoid opening too many sockets at once; high enough that even if
-// every source hits the network timeout, a full run stays well under the
-// function's 300s budget: ceil(100 / 20) * 12s = 60s worst case.
-// Moderate concurrency for the fetch stage (never the bottleneck — the fetch
-// stage runs in ~1s; the near-dup pass was the real cost).
+// How many sources to fetch concurrently. Bounded (rather than all 100 at once)
+// to avoid opening too many sockets simultaneously. The fetch stage is not the
+// bottleneck (it runs in ~1-3s for all 100 sources); concurrency here is purely
+// about not hammering the network layer.
 const FETCH_CONCURRENCY = 10;
 // Wall-clock ceiling on the whole fetch stage. Once exceeded, workers stop
 // starting new sources and return what they have, so the stage can never run
@@ -209,23 +205,14 @@ async function fetchSourceText(source: RSSSource): Promise<string> {
 
 async function fetchSource(source: RSSSource): Promise<Article[]> {
   const xml = await fetchSourceText(source);
-  // TEMP DIAGNOSTIC: log immediately BEFORE each synchronous step, tagged with
-  // the source name. parser.parseString() and the toArticle loop are both
-  // synchronous and CPU-bound; if either wedges the event loop, no *later* log
-  // (or timer) can fire, so the previous "after" logging had a blind spot right
-  // where the hang is. With before-logging, the last line before the silence
-  // names both the culprit source and the exact stage. Remove once identified.
-  console.error(`[rss-fetcher] TEMP pre-parse "${source.name}" ${xml.length}b`);
   const feed = await parser.parseString(xml);
 
-  console.error(`[rss-fetcher] TEMP pre-items "${source.name}" items=${feed.items.length}`);
   const articles: Article[] = [];
   for (const item of feed.items) {
     const article = toArticle(item, source);
     if (article) articles.push(article);
   }
 
-  console.error(`[rss-fetcher] TEMP done "${source.name}" kept=${articles.length}`);
   return articles;
 }
 
@@ -252,8 +239,7 @@ export async function fetchAllFeedsRaw(
   let sourcesFetched = 0;
   let sourcesFailed = 0;
   let sourcesSkipped = 0;
-  const sources = TEMP_SOURCE_CAP > 0 ? RSS_SOURCES.slice(0, TEMP_SOURCE_CAP) : RSS_SOURCES;
-  const results = await mapPool(sources, concurrency, async (source) => {
+  const results = await mapPool(RSS_SOURCES, concurrency, async (source) => {
     if (Date.now() > deadlineMs) {
       sourcesSkipped++;
       return [] as Article[];
@@ -280,7 +266,7 @@ export async function fetchAllFeedsRaw(
   );
   return {
     articles,
-    sourcesTotal: sources.length,
+    sourcesTotal: RSS_SOURCES.length,
     sourcesFetched,
     sourcesFailed,
     sourcesSkipped,
