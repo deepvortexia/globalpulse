@@ -1,6 +1,7 @@
 import Parser from "rss-parser";
 import { RSS_SOURCES } from "./rss-sources";
 import { canonicalizeUrl } from "./dedup";
+import { mapPool } from "./async-pool";
 import type { Article, CategoryId, RSSSource } from "@/types";
 
 type ArticleCategory = Exclude<CategoryId, "all" | "top">;
@@ -81,6 +82,19 @@ const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
 const EIGHT_HOURS_MS = 8 * 60 * 60 * 1000;
 const MIN_FRESH_ARTICLES = 20;
 const FETCH_TIMEOUT_MS = 10_000;
+// rss-parser's own `timeout` option isn't a hard guarantee — a source whose
+// connection stalls after headers (slow-trickle response, hung redirect)
+// can leave parseURL() pending indefinitely regardless of that setting. This
+// wraps every fetch in a real timer-based race so a single bad source can
+// never block the whole cron run past this bound. Set slightly above
+// FETCH_TIMEOUT_MS so rss-parser's own timeout fires first in the normal case
+// — this is purely the safety net for when it doesn't.
+const HARD_FETCH_TIMEOUT_MS = 15_000;
+// How many sources to fetch concurrently. Bounded (rather than all 100 at
+// once) to avoid opening too many sockets at once; high enough that even if
+// every source hits the hard timeout, a full run stays well under the
+// function's 300s budget: ceil(100 / 20) * 15s = 75s worst case.
+const FETCH_CONCURRENCY = 20;
 
 const parser: Parser<unknown, FeedItem> = new Parser({
   timeout: FETCH_TIMEOUT_MS,
@@ -131,8 +145,18 @@ function toArticle(item: FeedItem, source: RSSSource): Article | null {
   };
 }
 
+function withHardTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (error) => { clearTimeout(timer); reject(error); },
+    );
+  });
+}
+
 async function fetchSource(source: RSSSource): Promise<Article[]> {
-  const feed = await parser.parseURL(source.url);
+  const feed = await withHardTimeout(parser.parseURL(source.url), HARD_FETCH_TIMEOUT_MS, source.name);
   const articles: Article[] = [];
 
   for (const item of feed.items) {
@@ -143,25 +167,23 @@ async function fetchSource(source: RSSSource): Promise<Article[]> {
   return articles;
 }
 
-// Batched variant for the background cron: fetches every source in batches to
-// bound memory/socket usage, dedupes by URL, and returns ALL parsed articles
-// sorted newest-first WITHOUT the 4-8h freshness trim (the DB applies its own
-// 7-day retention). Per-source failures are logged and skipped.
-export async function fetchAllFeedsRaw(batchSize = 10): Promise<Article[]> {
-  const collected: Article[] = [];
+// Concurrency-bounded variant for the background cron: fetches every source
+// through a fixed-size worker pool (rather than sequential batches, where one
+// slow batch delays every batch after it), dedupes by URL, and returns ALL
+// parsed articles sorted newest-first WITHOUT the 4-8h freshness trim (the DB
+// applies its own 7-day retention). Per-source failures (including the hard
+// timeout above) are logged and skipped — never allowed to sink the run.
+export async function fetchAllFeedsRaw(concurrency = FETCH_CONCURRENCY): Promise<Article[]> {
+  const results = await mapPool(RSS_SOURCES, concurrency, async (source) => {
+    try {
+      return await fetchSource(source);
+    } catch (error) {
+      console.error(`[rss-fetcher] Failed to fetch "${source.name}":`, error);
+      return [] as Article[];
+    }
+  });
 
-  for (let i = 0; i < RSS_SOURCES.length; i += batchSize) {
-    const batch = RSS_SOURCES.slice(i, i + batchSize);
-    const results = await Promise.allSettled(batch.map(fetchSource));
-    results.forEach((result, j) => {
-      if (result.status === "fulfilled") {
-        collected.push(...result.value);
-      } else {
-        console.error(`[rss-fetcher] Failed to fetch "${batch[j].name}":`, result.reason);
-      }
-    });
-  }
-
+  const collected = results.flat();
   const deduped = new Map<string, Article>();
   for (const article of collected) {
     if (!deduped.has(article.url)) deduped.set(article.url, article);

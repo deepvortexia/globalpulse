@@ -3,6 +3,7 @@ import { fetchAllFeedsRaw, inferCategory } from "@/lib/rss-fetcher";
 import { getServiceRoleClient } from "@/lib/supabase";
 import { submitToIndexNow } from "@/lib/indexnow";
 import { findBestMatch, NEAR_DUP_AUTO_DROP, type TitledCandidate } from "@/lib/dedup";
+import { mapPool } from "@/lib/async-pool";
 import type { Article, CategoryId, Language } from "@/types";
 
 // Background job — runs on a schedule (see vercel.json), never user-facing.
@@ -12,7 +13,6 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 const SUMMARY_MODEL = "claude-haiku-4-5";
-const FETCH_BATCH_SIZE = 10;
 // Bound per-run work so the first run against an empty DB (≈500-1000 articles)
 // doesn't blow the time/cost budget. Successive 15-min runs backfill the rest.
 const MAX_NEW_PER_RUN = Number(process.env.CRON_MAX_ARTICLES ?? 60);
@@ -276,20 +276,6 @@ function toRow(article: Article, c: Classification, importanceScore: number) {
   };
 }
 
-// Runs an async mapper over items with a fixed concurrency ceiling.
-async function mapPool<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
-  const results: R[] = new Array(items.length);
-  let cursor = 0;
-  async function worker() {
-    while (cursor < items.length) {
-      const index = cursor++;
-      results[index] = await fn(items[index]);
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
-  return results;
-}
-
 export async function GET(req: Request) {
   const start = Date.now();
 
@@ -300,8 +286,8 @@ export async function GET(req: Request) {
   try {
     const db = getServiceRoleClient();
 
-    // 1. Fetch every source in batches of 10, deduped + newest-first.
-    const fetched = await fetchAllFeedsRaw(FETCH_BATCH_SIZE);
+    // 1. Fetch every source through a bounded worker pool, deduped + newest-first.
+    const fetched = await fetchAllFeedsRaw();
 
     // 2. Drop anything already stored (exact URL match, post-canonicalization).
     const existing = await loadStoredUrls(db);
