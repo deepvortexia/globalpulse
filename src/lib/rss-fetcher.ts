@@ -96,17 +96,15 @@ const FETCH_TIMEOUT_MS = 12_000;
 // never blocks. 4 MB comfortably fits legitimate feeds (largest real ones seen
 // are ~1-2 MB).
 const MAX_FEED_BYTES = 4 * 1024 * 1024;
-// TEMP DIAGNOSTIC: only fetch the first N sources so the run is guaranteed to
-// RETURN (below the concurrency wedge threshold, ~20 sources at concurrency 6),
-// letting the response report peakRssMb. 0 = no cap. Set back to 0 with the fix.
-const TEMP_SOURCE_CAP = 15;
+// TEMP DIAGNOSTIC: only fetch the first N sources. 0 = no cap (all sources).
+const TEMP_SOURCE_CAP = 0;
 // How many sources to fetch concurrently. Bounded (rather than all 100 at
 // once) to avoid opening too many sockets at once; high enough that even if
 // every source hits the network timeout, a full run stays well under the
 // function's 300s budget: ceil(100 / 20) * 12s = 60s worst case.
-// Moderate concurrency: fast enough to avoid sequential dead-source timeouts
-// piling up, low enough to bound peak simultaneous memory.
-const FETCH_CONCURRENCY = 6;
+// Moderate concurrency for the fetch stage (never the bottleneck — the fetch
+// stage runs in ~1s; the near-dup pass was the real cost).
+const FETCH_CONCURRENCY = 10;
 // Wall-clock ceiling on the whole fetch stage. Once exceeded, workers stop
 // starting new sources and return what they have, so the stage can never run
 // the function to its 300s platform limit — whatever the cause (slow source,

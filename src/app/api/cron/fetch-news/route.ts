@@ -16,6 +16,19 @@ const SUMMARY_MODEL = "claude-haiku-4-5";
 // Bound per-run work so the first run against an empty DB (≈500-1000 articles)
 // doesn't blow the time/cost budget. Successive 15-min runs backfill the rest.
 const MAX_NEW_PER_RUN = Number(process.env.CRON_MAX_ARTICLES ?? 60);
+// Cap the candidate set handed to the near-dup pass. That pass is O(N×M) in
+// title-similarity comparisons and makes a sequential Haiku tie-break call per
+// borderline pair, so running it over the full fresh set is fine at steady
+// state (a few new articles) but explodes on a backlog — e.g. after an outage,
+// ~5000 fresh articles produced ~90s+ of serial Haiku calls and ran the
+// function to its 300s limit. Trimming to the newest N (comfortably above
+// MAX_NEW_PER_RUN so dedup still has room to fill a full batch of uniques)
+// bounds the cost; the rest backfills over successive 15-min runs.
+const MAX_DEDUP_CANDIDATES = 180;
+// Hard ceiling on sequential Haiku tie-break calls in one near-dup pass. Beyond
+// it, borderline pairs fall back to "keep" (fail open — same policy as a failed
+// Haiku call), so a pathological batch can never serialize hundreds of calls.
+const MAX_DEDUP_HAIKU_CALLS = 25;
 // Worst case (every call stalls and exhausts its retry): ceil(60/8) * 20s =
 // 160s, leaving headroom under maxDuration alongside the RSS fetch stage.
 const HAIKU_CONCURRENCY = 8;
@@ -255,15 +268,13 @@ async function dropNearDuplicates(
   );
 
   const kept: Article[] = [];
-  // TEMP DIAGNOSTIC: this loop is strictly sequential (each candidate's dedup
-  // depends on buckets built by earlier candidates in the same run), and runs
-  // on the full uncapped `candidates` array before MAX_NEW_PER_RUN is ever
-  // applied. Under normal operation the Haiku tie-break branch is rare
-  // ("a handful per day" per the design comment above), but after a multi-day
-  // gap `candidates` can be far larger than usual, so this logs how many
-  // tie-break calls actually fire and how long the whole pass takes.
+  // The loop is strictly sequential (each candidate is compared against buckets
+  // built from earlier-kept candidates in the same run). The borderline branch
+  // makes a Haiku call, so it's capped at MAX_DEDUP_HAIKU_CALLS per run; beyond
+  // that, borderline pairs default to "keep" (fail open) rather than serializing
+  // an unbounded number of ~1s calls. Callers should also cap `candidates`
+  // (see MAX_DEDUP_CANDIDATES) so the O(N×M) similarity scan stays bounded.
   let haikuTieBreaks = 0;
-  const loopStart = Date.now();
   for (const candidate of oldestFirst) {
     const bucket = seenByLanguage[candidate.language];
     const match = findBestMatch(candidate.title, bucket, candidate.language);
@@ -272,20 +283,17 @@ async function dropNearDuplicates(
     if (match) {
       if (match.score >= NEAR_DUP_AUTO_DROP) {
         isDuplicate = true;
-      } else {
+      } else if (haikuTieBreaks < MAX_DEDUP_HAIKU_CALLS) {
         haikuTieBreaks++;
         isDuplicate = await isSameStoryHaiku(candidate.title, match.item.title);
       }
+      // else: tie-break budget spent — leave isDuplicate false (keep).
     }
 
     if (isDuplicate) continue;
     kept.push(candidate);
     bucket.push({ title: candidate.title, publishedAt: candidate.publishedAt });
   }
-  console.error(
-    `[cron/fetch-news] TEMP dropNearDuplicates: ${candidates.length} candidates, ` +
-      `${haikuTieBreaks} sequential Haiku tie-breaks, ${Date.now() - loopStart}ms`,
-  );
 
   // Restore newest-first order to match the rest of the pipeline's convention.
   return kept.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
@@ -361,7 +369,10 @@ export async function GET(req: Request) {
     // per-run cap so semantic dedup isn't crowded out by near-duplicate noise.
     const recentTitles = await loadRecentTitles(db);
     stageMs.loadRecentTitles = lap();
-    const deduped = await dropNearDuplicates(fresh, recentTitles);
+    // Bound the near-dup input (fresh is newest-first) so a large backlog can't
+    // make this pass O(N×M)-explode; the remainder backfills on later runs.
+    const dedupInput = fresh.slice(0, MAX_DEDUP_CANDIDATES);
+    const deduped = await dropNearDuplicates(dedupInput, recentTitles);
     stageMs.nearDup = lap();
     sampleMem();
     mark(`${deduped.length} after near-dup pass`);
@@ -419,7 +430,7 @@ export async function GET(req: Request) {
       success: true,
       inserted,
       skippedUrl: fetched.length - fresh.length,
-      skippedNearDuplicate: fresh.length - deduped.length,
+      skippedNearDuplicate: dedupInput.length - deduped.length,
       deferred: deduped.length - toProcess.length,
       fetched: fetched.length,
       errors,
