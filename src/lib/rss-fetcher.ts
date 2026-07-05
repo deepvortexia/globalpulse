@@ -81,19 +81,25 @@ interface FeedItem {
 const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
 const EIGHT_HOURS_MS = 8 * 60 * 60 * 1000;
 const MIN_FRESH_ARTICLES = 20;
-const FETCH_TIMEOUT_MS = 10_000;
-// rss-parser's own `timeout` option isn't a hard guarantee — a source whose
-// connection stalls after headers (slow-trickle response, hung redirect)
-// can leave parseURL() pending indefinitely regardless of that setting. This
-// wraps every fetch in a real timer-based race so a single bad source can
-// never block the whole cron run past this bound. Set slightly above
-// FETCH_TIMEOUT_MS so rss-parser's own timeout fires first in the normal case
-// — this is purely the safety net for when it doesn't.
-const HARD_FETCH_TIMEOUT_MS = 15_000;
+// Network timeout, enforced by an AbortController that actually tears down the
+// socket (see fetchSourceText) — unlike rss-parser's own `timeout`, which does
+// not reliably abort a stalled connection.
+const FETCH_TIMEOUT_MS = 12_000;
+// Hard ceiling on the bytes we'll pull from a single feed before parsing it.
+// The XML parse (xml2js, inside parser.parseString) is SYNCHRONOUS and
+// CPU-bound: a source that returns a multi-megabyte or pathological body will
+// block the entire Node event loop while it parses, freezing every other
+// in-flight fetch, timer, and — on Vercel — the whole function until the
+// platform kills it at maxDuration. Capping the download keeps the parser's
+// input bounded so no single source can wedge the loop. Streaming the body and
+// stopping at the cap is itself async (yields per chunk), so the cap check
+// never blocks. 4 MB comfortably fits legitimate feeds (largest real ones seen
+// are ~1-2 MB).
+const MAX_FEED_BYTES = 4 * 1024 * 1024;
 // How many sources to fetch concurrently. Bounded (rather than all 100 at
 // once) to avoid opening too many sockets at once; high enough that even if
-// every source hits the hard timeout, a full run stays well under the
-// function's 300s budget: ceil(100 / 20) * 15s = 75s worst case.
+// every source hits the network timeout, a full run stays well under the
+// function's 300s budget: ceil(100 / 20) * 12s = 60s worst case.
 const FETCH_CONCURRENCY = 20;
 
 const parser: Parser<unknown, FeedItem> = new Parser({
@@ -145,20 +151,67 @@ function toArticle(item: FeedItem, source: RSSSource): Article | null {
   };
 }
 
-function withHardTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
-    promise.then(
-      (value) => { clearTimeout(timer); resolve(value); },
-      (error) => { clearTimeout(timer); reject(error); },
-    );
-  });
+// Fetches a feed's raw XML with two hard guarantees the previous
+// parser.parseURL() path lacked:
+//   1. Real cancellation — an AbortController tied to a timer actually aborts
+//      the underlying request/socket on timeout, rather than leaving it running
+//      orphaned in the background (the old Promise.race wrapper resolved the
+//      race but never cancelled the operation, leaking the connection).
+//   2. A byte cap — the body is streamed and we stop once MAX_FEED_BYTES is
+//      exceeded, so an oversized response can never be handed whole to the
+//      synchronous XML parser and wedge the event loop.
+async function fetchSourceText(source: RSSSource): Promise<string> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(source.url, {
+      signal: controller.signal,
+      headers: {
+        // Some feeds 403 the default undici UA; a browser-ish UA is more widely
+        // accepted and matches how the feeds are meant to be consumed.
+        "user-agent":
+          "Mozilla/5.0 (compatible; GlobeVortexBot/1.0; +https://globevortex.com)",
+        accept: "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",
+      },
+    });
+    if (!res.ok) throw new Error(`Status code ${res.status}`);
+    if (!res.body) return await res.text();
+
+    // Stream with a byte ceiling. Each read() yields to the event loop, so this
+    // loop never blocks; hitting the cap aborts the request and bails.
+    const reader = res.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.length;
+      if (total > MAX_FEED_BYTES) {
+        await reader.cancel();
+        throw new Error(`response exceeded ${MAX_FEED_BYTES}-byte cap`);
+      }
+      chunks.push(value);
+    }
+    return Buffer.concat(chunks).toString("utf-8");
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function fetchSource(source: RSSSource): Promise<Article[]> {
-  const feed = await withHardTimeout(parser.parseURL(source.url), HARD_FETCH_TIMEOUT_MS, source.name);
-  const articles: Article[] = [];
+  const xml = await fetchSourceText(source);
+  // TEMP DIAGNOSTIC: time the synchronous parse per source so a pathological
+  // feed (slow xml2js parse) is named in the logs. Remove once identified.
+  const parseStart = Date.now();
+  const feed = await parser.parseString(xml);
+  const parseMs = Date.now() - parseStart;
+  if (parseMs > 500 || xml.length > 1_000_000) {
+    console.error(
+      `[rss-fetcher] TEMP parse "${source.name}": ${parseMs}ms, ${xml.length} bytes, ${feed.items.length} items`,
+    );
+  }
 
+  const articles: Article[] = [];
   for (const item of feed.items) {
     const article = toArticle(item, source);
     if (article) articles.push(article);
