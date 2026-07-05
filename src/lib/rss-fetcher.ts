@@ -200,23 +200,23 @@ async function fetchSourceText(source: RSSSource): Promise<string> {
 
 async function fetchSource(source: RSSSource): Promise<Article[]> {
   const xml = await fetchSourceText(source);
-  // TEMP DIAGNOSTIC: time the synchronous parse per source so a pathological
-  // feed (slow xml2js parse) is named in the logs. Remove once identified.
-  const parseStart = Date.now();
+  // TEMP DIAGNOSTIC: log immediately BEFORE each synchronous step, tagged with
+  // the source name. parser.parseString() and the toArticle loop are both
+  // synchronous and CPU-bound; if either wedges the event loop, no *later* log
+  // (or timer) can fire, so the previous "after" logging had a blind spot right
+  // where the hang is. With before-logging, the last line before the silence
+  // names both the culprit source and the exact stage. Remove once identified.
+  console.error(`[rss-fetcher] TEMP pre-parse "${source.name}" ${xml.length}b`);
   const feed = await parser.parseString(xml);
-  const parseMs = Date.now() - parseStart;
-  if (parseMs > 500 || xml.length > 1_000_000) {
-    console.error(
-      `[rss-fetcher] TEMP parse "${source.name}": ${parseMs}ms, ${xml.length} bytes, ${feed.items.length} items`,
-    );
-  }
 
+  console.error(`[rss-fetcher] TEMP pre-items "${source.name}" items=${feed.items.length}`);
   const articles: Article[] = [];
   for (const item of feed.items) {
     const article = toArticle(item, source);
     if (article) articles.push(article);
   }
 
+  console.error(`[rss-fetcher] TEMP done "${source.name}" kept=${articles.length}`);
   return articles;
 }
 
