@@ -16,7 +16,9 @@ const SUMMARY_MODEL = "claude-haiku-4-5";
 // Bound per-run work so the first run against an empty DB (≈500-1000 articles)
 // doesn't blow the time/cost budget. Successive 15-min runs backfill the rest.
 const MAX_NEW_PER_RUN = Number(process.env.CRON_MAX_ARTICLES ?? 60);
-const HAIKU_CONCURRENCY = 5;
+// Worst case (every call stalls and exhausts its retry): ceil(60/8) * 20s =
+// 160s, leaving headroom under maxDuration alongside the RSS fetch stage.
+const HAIKU_CONCURRENCY = 8;
 const URL_PAGE_SIZE = 1000;
 // Same-event stories from different outlets (or the same story re-served by
 // an unresolvable Google News redirect, see src/lib/dedup.ts) are only
@@ -31,7 +33,19 @@ const VALID_CATEGORIES: ReadonlySet<string> = new Set<ArticleCategory>([
   "conflicts", "health", "culture", "sports", "fifa",
 ]);
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+// Explicit timeout, well under maxDuration: the SDK's own default (10 min)
+// outlives this whole function's 300s budget, so a stalled/black-holed
+// connection to the API would otherwise hang every Haiku call until Vercel
+// kills the run — the same failure mode just fixed for RSS fetches above.
+// maxRetries is capped too: the SDK retries timed-out requests by default
+// (maxRetries: 2), which would let one stalled call consume timeout * 3 — a
+// single retry is enough headroom since a hung call already falls back to
+// keyword classification (see processArticleWithHaiku's catch block).
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+  timeout: 10_000,
+  maxRetries: 1,
+});
 
 function isAuthorized(req: Request): boolean {
   const secret = process.env.CRON_SECRET;
