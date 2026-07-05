@@ -78,15 +78,11 @@ export default function Header({
         >
           <svg
             aria-hidden
-            className="h-3.5 w-3.5 flex-shrink-0 text-black"
+            className="h-3 w-3 flex-shrink-0 text-black"
             viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+            fill="currentColor"
           >
-            <path d="M21 12a9 9 0 1 1-9-9" />
+            <path d="M12 2c.6 3.4 1.7 5.9 3.3 7.5S19 12 22 12c-3 0-5.1.9-6.7 2.5S12.6 18.6 12 22c-.6-3.4-1.7-5.9-3.3-7.5S5 12 2 12c3 0 5.1-.9 6.7-2.5S11.4 5.4 12 2Z" />
           </svg>
           <span>{language === "fr" ? "2026 en 3D" : "2026 in 3D"}</span>
         </Link>
