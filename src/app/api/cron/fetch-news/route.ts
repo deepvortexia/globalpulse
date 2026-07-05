@@ -331,21 +331,28 @@ export async function GET(req: Request) {
   const heartbeat = setInterval(sampleMem, 500);
 
   try {
+    // TEMP DIAGNOSTIC: per-stage wall-clock, returned losslessly in the response.
+    let t = Date.now();
+    const lap = () => { const d = Date.now() - t; t = Date.now(); return d; };
+    const stageMs: Record<string, number> = {};
+
     const db = getServiceRoleClient();
     mark("got db client");
+    lap();
 
     // 1. Fetch every source through a bounded worker pool, deduped + newest-first.
     const fetchRes = await fetchAllFeedsRaw();
     const fetched = fetchRes.articles;
     sampleMem();
+    stageMs.fetch = lap();
     mark(
       `fetched ${fetched.length} articles; sources fetched=${fetchRes.sourcesFetched} failed=${fetchRes.sourcesFailed} skipped=${fetchRes.sourcesSkipped}; peakRss=${peakRssMb}MB`,
     );
 
     // 2. Drop anything already stored (exact URL match, post-canonicalization).
     const existing = await loadStoredUrls(db);
-    mark(`loaded ${existing.size} stored urls`);
     const fresh = fetched.filter((a) => !existing.has(a.url));
+    stageMs.urlDedup = lap();
     mark(`${fresh.length} fresh after url dedup`);
 
     // 3. Drop near-duplicates: the same event covered by multiple outlets, or
@@ -353,8 +360,10 @@ export async function GET(req: Request) {
     // Layer 1 (URL canonicalization) can't resolve. Runs before the
     // per-run cap so semantic dedup isn't crowded out by near-duplicate noise.
     const recentTitles = await loadRecentTitles(db);
-    mark(`loaded ${recentTitles.length} recent titles`);
+    stageMs.loadRecentTitles = lap();
     const deduped = await dropNearDuplicates(fresh, recentTitles);
+    stageMs.nearDup = lap();
+    sampleMem();
     mark(`${deduped.length} after near-dup pass`);
 
     // 4. Bound per-run work (newest first); the rest backfills next run.
@@ -362,6 +371,7 @@ export async function GET(req: Request) {
 
     // 5. Classify + summarize + importance-score with Haiku under a concurrency cap.
     const processed = await mapPool(toProcess, HAIKU_CONCURRENCY, processArticle);
+    stageMs.haiku = lap();
     mark(`classified ${processed.length} articles`);
     const errors = processed.filter((p) => p.failed).length;
     const rows = toProcess.map((article, i) =>
@@ -391,6 +401,8 @@ export async function GET(req: Request) {
       }
     }
 
+    stageMs.insert = lap();
+
     // 7. Purge articles older than 7 days. Non-fatal: a cleanup failure must
     // not fail an otherwise-successful fetch run.
     let purged = true;
@@ -399,6 +411,7 @@ export async function GET(req: Request) {
       purged = false;
       console.error("[cron/fetch-news] delete_old_articles failed:", purgeError.message);
     }
+    stageMs.purge = lap();
 
     sampleMem();
     const duration = Date.now() - start;
@@ -413,12 +426,15 @@ export async function GET(req: Request) {
       purged,
       duration,
       // TEMP DIAGNOSTIC: lossless readout via the workflow's response capture.
+      freshAfterUrlDedup: fresh.length,
+      recentTitles: recentTitles.length,
       sources: {
         fetched: fetchRes.sourcesFetched,
         failed: fetchRes.sourcesFailed,
         skipped: fetchRes.sourcesSkipped,
         total: fetchRes.sourcesTotal,
       },
+      stageMs,
       peakRssMb,
     });
   } catch (error) {
