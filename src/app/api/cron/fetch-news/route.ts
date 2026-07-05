@@ -255,20 +255,37 @@ async function dropNearDuplicates(
   );
 
   const kept: Article[] = [];
+  // TEMP DIAGNOSTIC: this loop is strictly sequential (each candidate's dedup
+  // depends on buckets built by earlier candidates in the same run), and runs
+  // on the full uncapped `candidates` array before MAX_NEW_PER_RUN is ever
+  // applied. Under normal operation the Haiku tie-break branch is rare
+  // ("a handful per day" per the design comment above), but after a multi-day
+  // gap `candidates` can be far larger than usual, so this logs how many
+  // tie-break calls actually fire and how long the whole pass takes.
+  let haikuTieBreaks = 0;
+  const loopStart = Date.now();
   for (const candidate of oldestFirst) {
     const bucket = seenByLanguage[candidate.language];
     const match = findBestMatch(candidate.title, bucket, candidate.language);
 
     let isDuplicate = false;
     if (match) {
-      isDuplicate =
-        match.score >= NEAR_DUP_AUTO_DROP || (await isSameStoryHaiku(candidate.title, match.item.title));
+      if (match.score >= NEAR_DUP_AUTO_DROP) {
+        isDuplicate = true;
+      } else {
+        haikuTieBreaks++;
+        isDuplicate = await isSameStoryHaiku(candidate.title, match.item.title);
+      }
     }
 
     if (isDuplicate) continue;
     kept.push(candidate);
     bucket.push({ title: candidate.title, publishedAt: candidate.publishedAt });
   }
+  console.error(
+    `[cron/fetch-news] TEMP dropNearDuplicates: ${candidates.length} candidates, ` +
+      `${haikuTieBreaks} sequential Haiku tie-breaks, ${Date.now() - loopStart}ms`,
+  );
 
   // Restore newest-first order to match the rest of the pipeline's convention.
   return kept.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
@@ -297,28 +314,39 @@ export async function GET(req: Request) {
     return Response.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
+  // TEMP DIAGNOSTIC: stage-boundary timing to find where a run is spending
+  // its time. Remove once the fetch-news hang investigation is closed out.
+  const mark = (label: string) => console.error(`[cron/fetch-news] TEMP stage: ${label} at +${Date.now() - start}ms`);
+
   try {
     const db = getServiceRoleClient();
+    mark("got db client");
 
     // 1. Fetch every source through a bounded worker pool, deduped + newest-first.
     const fetched = await fetchAllFeedsRaw();
+    mark(`fetched ${fetched.length} raw articles`);
 
     // 2. Drop anything already stored (exact URL match, post-canonicalization).
     const existing = await loadStoredUrls(db);
+    mark(`loaded ${existing.size} stored urls`);
     const fresh = fetched.filter((a) => !existing.has(a.url));
+    mark(`${fresh.length} fresh after url dedup`);
 
     // 3. Drop near-duplicates: the same event covered by multiple outlets, or
     // the same story re-served under a fresh Google News redirect URL that
     // Layer 1 (URL canonicalization) can't resolve. Runs before the
     // per-run cap so semantic dedup isn't crowded out by near-duplicate noise.
     const recentTitles = await loadRecentTitles(db);
+    mark(`loaded ${recentTitles.length} recent titles`);
     const deduped = await dropNearDuplicates(fresh, recentTitles);
+    mark(`${deduped.length} after near-dup pass`);
 
     // 4. Bound per-run work (newest first); the rest backfills next run.
     const toProcess = deduped.slice(0, MAX_NEW_PER_RUN);
 
     // 5. Classify + summarize + importance-score with Haiku under a concurrency cap.
     const processed = await mapPool(toProcess, HAIKU_CONCURRENCY, processArticle);
+    mark(`classified ${processed.length} articles`);
     const errors = processed.filter((p) => p.failed).length;
     const rows = toProcess.map((article, i) =>
       toRow(article, processed[i].classification, processed[i].importanceScore),
