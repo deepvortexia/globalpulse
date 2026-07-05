@@ -96,6 +96,10 @@ const FETCH_TIMEOUT_MS = 12_000;
 // never blocks. 4 MB comfortably fits legitimate feeds (largest real ones seen
 // are ~1-2 MB).
 const MAX_FEED_BYTES = 4 * 1024 * 1024;
+// TEMP DIAGNOSTIC: only fetch the first N sources so the run is guaranteed to
+// RETURN (below the concurrency wedge threshold, ~20 sources at concurrency 6),
+// letting the response report peakRssMb. 0 = no cap. Set back to 0 with the fix.
+const TEMP_SOURCE_CAP = 15;
 // How many sources to fetch concurrently. Bounded (rather than all 100 at
 // once) to avoid opening too many sockets at once; high enough that even if
 // every source hits the network timeout, a full run stays well under the
@@ -250,7 +254,8 @@ export async function fetchAllFeedsRaw(
   let sourcesFetched = 0;
   let sourcesFailed = 0;
   let sourcesSkipped = 0;
-  const results = await mapPool(RSS_SOURCES, concurrency, async (source) => {
+  const sources = TEMP_SOURCE_CAP > 0 ? RSS_SOURCES.slice(0, TEMP_SOURCE_CAP) : RSS_SOURCES;
+  const results = await mapPool(sources, concurrency, async (source) => {
     if (Date.now() > deadlineMs) {
       sourcesSkipped++;
       return [] as Article[];
@@ -277,7 +282,7 @@ export async function fetchAllFeedsRaw(
   );
   return {
     articles,
-    sourcesTotal: RSS_SOURCES.length,
+    sourcesTotal: sources.length,
     sourcesFetched,
     sourcesFailed,
     sourcesSkipped,
