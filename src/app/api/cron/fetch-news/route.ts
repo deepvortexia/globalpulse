@@ -318,16 +318,18 @@ export async function GET(req: Request) {
   // its time. Remove once the fetch-news hang investigation is closed out.
   const mark = (label: string) => console.error(`[cron/fetch-news] TEMP stage: ${label} at +${Date.now() - start}ms`);
 
-  // TEMP DIAGNOSTIC: an independent heartbeat, unrelated to any RSS/Haiku/DB
-  // call. If this stops logging, the Node event loop itself is blocked
-  // (e.g. a synchronous, CPU-bound XML parse on a pathological feed) — no
-  // JS-level timeout could rescue that. If it keeps firing right up to the
-  // 300s kill while stage marks stall, the hang is a genuine async logic bug
-  // instead.
-  const heartbeat = setInterval(
-    () => console.error(`[cron/fetch-news] TEMP heartbeat at +${Date.now() - start}ms`),
-    3000,
-  );
+  // TEMP DIAGNOSTIC: independent heartbeat sampling memory every 1s. If heap/rss
+  // climb steadily and the heartbeat then goes silent at a high value, the wedge
+  // is memory/GC pressure (stop-the-world GC starves timers) — confirming the
+  // concurrency-dependent theory. 1s interval so more samples survive Vercel's
+  // lossy log stream. The last surviving line shows the memory level at wedge.
+  const heartbeat = setInterval(() => {
+    const m = process.memoryUsage();
+    const mb = (n: number) => Math.round(n / 1024 / 1024);
+    console.error(
+      `[cron/fetch-news] TEMP heartbeat +${Date.now() - start}ms rss=${mb(m.rss)}MB heapUsed=${mb(m.heapUsed)}MB heapTotal=${mb(m.heapTotal)}MB ext=${mb(m.external)}MB`,
+    );
+  }, 1000);
 
   try {
     const db = getServiceRoleClient();
