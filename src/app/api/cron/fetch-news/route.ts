@@ -28,7 +28,14 @@ const MAX_DEDUP_CANDIDATES = 180;
 // Hard ceiling on sequential Haiku tie-break calls in one near-dup pass. Beyond
 // it, borderline pairs fall back to "keep" (fail open — same policy as a failed
 // Haiku call), so a pathological batch can never serialize hundreds of calls.
-const MAX_DEDUP_HAIKU_CALLS = 25;
+// Each call is a tiny (max_tokens: 5) ~0.4s request, so 100 costs ~40s; a full
+// run is ~30s total otherwise, leaving comfortable headroom under maxDuration
+// (300s). This was originally 25 — deliberately conservative during the wedge
+// investigation — which proved too low: a backlog drain or a single high-volume
+// breaking story (one event covered by dozens of feeds in a 15-min window) can
+// exceed 25 borderline pairs, letting real near-duplicates slip through. The
+// per-run tie-break count is surfaced in the response so this can be monitored.
+const MAX_DEDUP_HAIKU_CALLS = 100;
 // Worst case (every call stalls and exhausts its retry): ceil(60/8) * 20s =
 // 160s, leaving headroom under maxDuration alongside the RSS fetch stage.
 const HAIKU_CONCURRENCY = 8;
@@ -254,10 +261,16 @@ async function isSameStoryHaiku(titleA: string, titleB: string): Promise<boolean
 // sources are dropped. This is the simpler of the two policies described in
 // the task (earliest-published vs. highest-importance-score) — it needs no
 // Haiku call up front, unlike importance score.
+interface DedupResult {
+  kept: Article[];
+  haikuTieBreaks: number; // borderline pairs that spent a Haiku tie-break call
+  budgetHit: boolean; // true if the tie-break cap was reached (dups may have slipped through)
+}
+
 async function dropNearDuplicates(
   candidates: Article[],
   recentExisting: (TitledCandidate & { language: Language })[],
-): Promise<Article[]> {
+): Promise<DedupResult> {
   const seenByLanguage: Record<Language, TitledCandidate[]> = {
     en: recentExisting.filter((r) => r.language === "en"),
     fr: recentExisting.filter((r) => r.language === "fr"),
@@ -296,7 +309,8 @@ async function dropNearDuplicates(
   }
 
   // Restore newest-first order to match the rest of the pipeline's convention.
-  return kept.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+  kept.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+  return { kept, haikuTieBreaks, budgetHit: haikuTieBreaks >= MAX_DEDUP_HAIKU_CALLS };
 }
 
 // Maps an Article + its classification + importance score to a DB insert row.
@@ -342,7 +356,8 @@ export async function GET(req: Request) {
     // fresh is newest-first; trim before the near-dup pass so a backlog can't
     // blow the time budget. The remainder backfills on successive 15-min runs.
     const dedupInput = fresh.slice(0, MAX_DEDUP_CANDIDATES);
-    const deduped = await dropNearDuplicates(dedupInput, recentTitles);
+    const dedupResult = await dropNearDuplicates(dedupInput, recentTitles);
+    const deduped = dedupResult.kept;
 
     // 4. Bound per-run work (newest first); the rest backfills next run.
     const toProcess = deduped.slice(0, MAX_NEW_PER_RUN);
@@ -396,6 +411,11 @@ export async function GET(req: Request) {
       fetched: fetched.length,
       sourcesFetched: fetchRes.sourcesFetched,
       sourcesFailed: fetchRes.sourcesFailed,
+      // Near-dup Haiku tie-break usage. If budgetHit is true, borderline pairs
+      // were kept without a Haiku check and real duplicates may have slipped in
+      // — the signal to raise MAX_DEDUP_HAIKU_CALLS.
+      dedupHaikuTieBreaks: dedupResult.haikuTieBreaks,
+      dedupBudgetHit: dedupResult.budgetHit,
       errors,
       purged,
       duration,
