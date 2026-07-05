@@ -318,6 +318,17 @@ export async function GET(req: Request) {
   // its time. Remove once the fetch-news hang investigation is closed out.
   const mark = (label: string) => console.error(`[cron/fetch-news] TEMP stage: ${label} at +${Date.now() - start}ms`);
 
+  // TEMP DIAGNOSTIC: an independent heartbeat, unrelated to any RSS/Haiku/DB
+  // call. If this stops logging, the Node event loop itself is blocked
+  // (e.g. a synchronous, CPU-bound XML parse on a pathological feed) — no
+  // JS-level timeout could rescue that. If it keeps firing right up to the
+  // 300s kill while stage marks stall, the hang is a genuine async logic bug
+  // instead.
+  const heartbeat = setInterval(
+    () => console.error(`[cron/fetch-news] TEMP heartbeat at +${Date.now() - start}ms`),
+    3000,
+  );
+
   try {
     const db = getServiceRoleClient();
     mark("got db client");
@@ -406,5 +417,7 @@ export async function GET(req: Request) {
       },
       { status: 500 },
     );
+  } finally {
+    clearInterval(heartbeat);
   }
 }
