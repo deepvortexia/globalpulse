@@ -17,6 +17,8 @@ export interface DbArticleRow {
   created_at: string;
   score: number | null;
   importance_score: number | null;
+  meta_title: string | null;
+  meta_description: string | null;
 }
 
 const DEFAULT_PAGE_SIZE = 24;

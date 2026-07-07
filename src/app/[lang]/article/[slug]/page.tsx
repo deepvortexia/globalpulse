@@ -4,6 +4,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getArticleBySlug, getRelatedArticles } from "@/lib/articles";
 import { categoryLabel } from "@/lib/categories";
+import {
+  META_DESCRIPTION_MAX,
+  META_TITLE_MAX,
+  cleanDisplayTitle,
+  isGoogleNewsSourceName,
+  truncateAtWordBoundary,
+} from "@/lib/seo";
 import type { CategoryId, Language } from "@/types";
 
 // ISR: article pages are static between daily revalidations. Content is
@@ -31,20 +38,36 @@ export async function generateMetadata({
   }
 
   const url = `${SITE}/${lang}/article/${article.id}`;
-  const description = article.summary?.slice(0, 160) ?? article.title;
+
+  // Prefer the Haiku-generated SEO meta title/description (see
+  // src/app/api/cron/fetch-news/route.ts); fall back to a cleaned version of
+  // the editorial title/summary for articles that predate this field or
+  // skipped the Haiku call (outside its 6h recency window). The on-page <h1>
+  // and JSON-LD headline below are untouched — only these SERP-facing tags
+  // change.
+  const rawTitle =
+    article.meta_title ??
+    cleanDisplayTitle(article.title, isGoogleNewsSourceName(article.source));
+  const title = truncateAtWordBoundary(rawTitle, META_TITLE_MAX);
+  const description = article.meta_description ?? (
+    article.summary
+      ? truncateAtWordBoundary(article.summary, META_DESCRIPTION_MAX)
+      : title
+  );
+
   const images = article.image_url
     ? [{ url: article.image_url, width: 1200, height: 630 }]
     : [{ url: `${SITE}/og-image.png`, width: 1200, height: 630 }];
 
   return {
-    title: article.title,
+    title,
     description,
     // Self-referential canonical only — no cross-locale hreflang, because the
     // article is single-language and has no counterpart in the other locale.
     alternates: { canonical: url },
     robots: { index: true, follow: true },
     openGraph: {
-      title: article.title,
+      title,
       description,
       type: "article",
       locale: article.language === "fr" ? "fr_CA" : "en_US",
