@@ -424,22 +424,6 @@ body::before {
   transform: translateY(0) scale(1);
 }
 
-/* Globy (3D mascot, GlobyModel.tsx): the fixed wrapper climbs gently as you
-   scroll — same --gvs mechanism as the particle sheets, but a deliberately
-   tiny factor so he stays in frame across the whole ~12-month journey. The
-   in-canvas idle/sway animation lives in the component. */
-.gv-globy {
-  transform: translateY(calc(var(--gvs) * -0.012px));
-  will-change: transform;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .gv-globy {
-    transform: none;
-    will-change: auto;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .gv-vortex-glow,
   .gv-vortex-spiral,

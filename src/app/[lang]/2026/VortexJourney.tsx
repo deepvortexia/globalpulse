@@ -5,12 +5,6 @@ import Link from "next/link";
 import type { MonthChapter } from "@/lib/highlights";
 import type { Language } from "@/types";
 
-// Globy (real 3D, React Three Fiber) is temporarily unrendered pending quality
-// fixes to the model (pose, tail, glow lost in GLB → Three.js). To restore,
-// uncomment this import (plus `dynamic` above) and the .gv-globy block below.
-// import dynamic from "next/dynamic";
-// const GlobyModel = dynamic(() => import("./GlobyModel"), { ssr: false });
-
 // ── Immersive "enter the vortex" scroll journey ──────────────────────────────
 // Three depth layers, all driven by a single --gvs (scrollY, unitless px)
 // custom property set once per animation frame on the root element:
@@ -392,16 +386,6 @@ export default function VortexJourney({ language, year, chapters }: VortexJourne
 
       {/* Portal pulse overlay: flashed by the chapter observer on month entry. */}
       <div ref={flashRef} className="gv-portal-flash" aria-hidden />
-
-      {/* Globy temporarily removed pending 3D quality fixes — see the
-          commented-out GlobyModel import at the top of this file.
-      <div
-        aria-hidden
-        className="gv-globy pointer-events-none fixed right-[2vw] top-[38vh] z-[5] hidden h-[300px] w-[240px] sm:block"
-      >
-        <GlobyModel />
-      </div>
-      */}
 
       {/* Minimal top bar: back to the news + locale switch for this page. */}
       <nav className="fixed inset-x-0 top-0 z-30 flex items-center justify-between px-4 py-3 sm:px-6">
