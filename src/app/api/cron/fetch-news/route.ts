@@ -4,6 +4,7 @@ import { getServiceRoleClient } from "@/lib/supabase";
 import { submitToIndexNow } from "@/lib/indexnow";
 import { findBestMatch, NEAR_DUP_AUTO_DROP, type TitledCandidate } from "@/lib/dedup";
 import { mapPool } from "@/lib/async-pool";
+import { META_DESCRIPTION_MAX, META_TITLE_MAX } from "@/lib/seo";
 import type { Article, CategoryId, Language } from "@/types";
 
 // Background job — runs on a schedule (see vercel.json), never user-facing.
@@ -77,6 +78,8 @@ function isAuthorized(req: Request): boolean {
 interface Classification {
   category: ArticleCategory;
   summary: string;
+  metaTitle: string | null;
+  metaDescription: string | null;
 }
 
 interface Processed {
@@ -95,20 +98,23 @@ function extractJson(text: string): unknown {
 const RECENCY_WINDOW_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 // Single Haiku call returning category + 2-sentence summary + 0-100 importance
-// score in one JSON response (merged from what used to be two sequential calls).
-// Falls back to keyword classification + the raw RSS description on any failure
-// so a flaky model call never drops an article entirely (counted as an error).
+// score + SEO meta title/description in one JSON response (merged from what
+// used to be two sequential calls). Falls back to keyword classification + the
+// raw RSS description on any failure so a flaky model call never drops an
+// article entirely (counted as an error); meta_title/meta_description fall
+// back to null, which generateMetadata handles by deriving from the cleaned
+// title/summary instead.
 async function processArticleWithHaiku(article: Article): Promise<Processed> {
   const languageName = article.language === "fr" ? "French" : "English";
   try {
     const message = await anthropic.messages.create({
       model: SUMMARY_MODEL,
-      max_tokens: 260,
+      max_tokens: 380,
       stream: false,
       messages: [
         {
           role: "user",
-          content: `You classify, summarize, and rate a news article for a bilingual news site.
+          content: `You classify, summarize, and rate a news article for a bilingual news site, and write SEO-optimized search-result metadata for it.
 Choose exactly one category from this list: world, politics, economy, science, climate, conflicts, health, culture, sports, fifa.
 Write a concise 2-sentence summary in ${languageName} (the article's own language).
 Rate the article's global importance on a 0-100 scale:
@@ -117,11 +123,17 @@ Rate the article's global importance on a 0-100 scale:
 50-74 = notable regional, tech, or science story.
 0-49 = routine or local news.
 
+Also write SEO metadata in ${languageName}, distinct from the editorial headline above. Editorial headlines chase curiosity or wordplay; search-result titles must state the concrete, specific angle in plain language a searcher would actually type, with the key terms front-loaded. For example:
+- Editorial headline "Bernie Sanders Saw This Coming" -> meta_title "Bernie Sanders warns on Big Tech wealth concentration"
+- Editorial headline "NASA launches robot to rescue aging Swift telescope from fiery demise" -> meta_title "NASA plans robotic rescue mission to save Swift telescope"
+meta_title: plain-language, front-loaded with the specific newsworthy terms, STRICTLY under ${META_TITLE_MAX} characters.
+meta_description: one or two complete sentences stating the specific newsworthy angle up front, STRICTLY under ${META_DESCRIPTION_MAX} characters.
+
 Title: ${article.title}
 Description: ${article.description}
 
 Respond with ONLY a JSON object, no markdown formatting:
-{"category": "<one allowed category>", "summary": "<2 sentences in ${languageName}>", "score": <integer 0-100>}`,
+{"category": "<one allowed category>", "summary": "<2 sentences in ${languageName}>", "score": <integer 0-100>, "meta_title": "<under ${META_TITLE_MAX} chars, in ${languageName}>", "meta_description": "<under ${META_DESCRIPTION_MAX} chars, in ${languageName}>"}`,
         },
       ],
     });
@@ -129,7 +141,11 @@ Respond with ONLY a JSON object, no markdown formatting:
     const textBlock = message.content.find((b) => b.type === "text");
     if (!textBlock || textBlock.type !== "text") throw new Error("No text content from Claude");
 
-    const parsed = extractJson(textBlock.text) as Partial<Classification> & { score?: unknown };
+    const parsed = extractJson(textBlock.text) as Partial<Classification> & {
+      score?: unknown;
+      meta_title?: unknown;
+      meta_description?: unknown;
+    };
     const category = (parsed.category && VALID_CATEGORIES.has(parsed.category)
       ? parsed.category
       : inferCategory(article.title, article.description)) as ArticleCategory;
@@ -141,14 +157,28 @@ Respond with ONLY a JSON object, no markdown formatting:
     const importanceScore = Number.isFinite(rawScore)
       ? Math.max(0, Math.min(100, Math.round(rawScore)))
       : 0;
+    const metaTitle =
+      typeof parsed.meta_title === "string" && parsed.meta_title.trim()
+        ? parsed.meta_title.trim().slice(0, META_TITLE_MAX)
+        : null;
+    const metaDescription =
+      typeof parsed.meta_description === "string" && parsed.meta_description.trim()
+        ? parsed.meta_description.trim().slice(0, META_DESCRIPTION_MAX)
+        : null;
 
-    return { classification: { category, summary }, importanceScore, failed: false };
+    return {
+      classification: { category, summary, metaTitle, metaDescription },
+      importanceScore,
+      failed: false,
+    };
   } catch (error) {
     console.error(`[cron/fetch-news] Haiku failed for "${article.url}":`, error);
     return {
       classification: {
         category: inferCategory(article.title, article.description),
         summary: article.description,
+        metaTitle: null,
+        metaDescription: null,
       },
       importanceScore: 0,
       failed: true,
@@ -169,6 +199,8 @@ async function processArticle(article: Article): Promise<Processed> {
       classification: {
         category: inferCategory(article.title, article.description),
         summary: article.description,
+        metaTitle: null,
+        metaDescription: null,
       },
       importanceScore: 0,
       failed: false,
@@ -326,6 +358,8 @@ function toRow(article: Article, c: Classification, importanceScore: number) {
     published_at: article.publishedAt,
     score: 0,
     importance_score: importanceScore,
+    meta_title: c.metaTitle,
+    meta_description: c.metaDescription,
   };
 }
 

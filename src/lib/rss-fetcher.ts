@@ -2,6 +2,7 @@ import Parser from "rss-parser";
 import { RSS_SOURCES } from "./rss-sources";
 import { canonicalizeUrl } from "./dedup";
 import { mapPool } from "./async-pool";
+import { cleanDisplayTitle, isGoogleNewsUrl } from "./seo";
 import type { Article, CategoryId, RSSSource } from "@/types";
 
 type ArticleCategory = Exclude<CategoryId, "all" | "top">;
@@ -22,6 +23,11 @@ function decodeHtmlEntities(text: string): string {
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)));
+}
+
+function cleanTitle(rawTitle: string, source: RSSSource): string {
+  const decoded = decodeHtmlEntities(rawTitle.trim());
+  return cleanDisplayTitle(decoded, isGoogleNewsUrl(source.url));
 }
 
 // Keyword-based classification run on every article's title + description. The
@@ -138,7 +144,7 @@ function toArticle(item: FeedItem, source: RSSSource): Article | null {
   const publishedTime = new Date(rawDate).getTime();
   if (Number.isNaN(publishedTime)) return null;
 
-  const title = decodeHtmlEntities(item.title.trim());
+  const title = cleanTitle(item.title, source);
   const description = decodeHtmlEntities((item.contentSnippet ?? item.content ?? "").trim());
   const url = canonicalizeUrl(item.link);
 
