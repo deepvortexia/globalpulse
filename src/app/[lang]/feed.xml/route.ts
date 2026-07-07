@@ -1,4 +1,5 @@
 import { getRecentArticlesForFeed } from "@/lib/articles";
+import { escapeXml } from "@/lib/xml";
 import type { Language } from "@/types";
 
 // Per-locale RSS 2.0 feed for Google Discover's "Follow" feature. Each locale
@@ -13,15 +14,6 @@ const FEED_LIMIT = 50;
 
 export function generateStaticParams() {
   return [{ lang: "en" }, { lang: "fr" }];
-}
-
-function escapeXml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
 }
 
 export async function GET(

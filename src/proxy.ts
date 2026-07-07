@@ -105,10 +105,11 @@ export function proxy(request: NextRequest): NextResponse {
 
 export const config = {
   // Run on everything except Next internals, API routes, and the metadata files
-  // that have their own handlers (robots.txt, sitemap.xml) or are static assets
-  // (favicon.ico). Note: this deliberately does NOT exclude arbitrary .txt, so
-  // the dynamically-named IndexNow key file still reaches the proxy above.
+  // that have their own handlers (robots.txt, sitemap.xml, news-sitemap.xml) or
+  // are static assets (favicon.ico). Note: this deliberately does NOT exclude
+  // arbitrary .txt, so the dynamically-named IndexNow key file still reaches
+  // the proxy above.
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|news-sitemap.xml).*)",
   ],
 };
