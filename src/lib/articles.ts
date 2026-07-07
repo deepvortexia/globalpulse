@@ -285,6 +285,30 @@ export async function getArticleIdsForSitemap(): Promise<
   return data as Pick<DbArticleRow, "id" | "created_at" | "language">[];
 }
 
+// Google News sitemap window: the spec caps entries at 48h old and 1000 URLs
+// per file. A raw 48h cut alone runs well past 1000 at current volume, so this
+// also filters to importance_score >= 50 — the same floor Top Stories uses —
+// which both keeps us under the cap and limits the feed to stories actually
+// worth surfacing to Google News rather than padding it with routine local
+// news. `limit(1000)` stays as a hard safety net regardless.
+const NEWS_SITEMAP_WINDOW_HOURS = 48;
+const NEWS_SITEMAP_MIN_SCORE = 50;
+
+export async function getArticlesForNewsSitemap(): Promise<
+  Pick<DbArticleRow, "id" | "title" | "language" | "published_at">[]
+> {
+  const since = new Date(Date.now() - NEWS_SITEMAP_WINDOW_HOURS * 60 * 60 * 1000).toISOString();
+  const { data, error } = await getServiceRoleClient()
+    .from("articles")
+    .select("id, title, language, published_at")
+    .gte("published_at", since)
+    .gte("importance_score", NEWS_SITEMAP_MIN_SCORE)
+    .order("published_at", { ascending: false })
+    .limit(1000);
+  if (error || !data) return [];
+  return data as Pick<DbArticleRow, "id" | "title" | "language" | "published_at">[];
+}
+
 // Most recently ingested articles for the RSS feed (Google Discover "Follow"
 // support). Ordered by created_at (ingestion time), matching the sitemap's
 // ordering — not published_at, so the feed always reflects what GlobeVortex

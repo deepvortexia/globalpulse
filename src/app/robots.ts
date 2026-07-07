@@ -23,7 +23,10 @@ export default function robots(): MetadataRoute.Robots {
         allow: '/',
       },
     ],
-    sitemap: 'https://globevortex.com/sitemap.xml',
+    sitemap: [
+      'https://globevortex.com/sitemap.xml',
+      'https://globevortex.com/news-sitemap.xml',
+    ],
     host: 'https://globevortex.com',
   };
 }
